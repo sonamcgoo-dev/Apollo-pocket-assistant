@@ -41,7 +41,6 @@ class PreferencesManager @Inject constructor(
         val VOICE_ENABLED = booleanPreferencesKey("voice_enabled")
         val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         val AUTO_MEMORY = booleanPreferencesKey("auto_memory")
-        val ASCII_ANIMATIONS = booleanPreferencesKey("ascii_animations")
         
         // Control Prompts
         val SYSTEM_PROMPT = stringPreferencesKey("system_prompt")
@@ -74,7 +73,6 @@ class PreferencesManager @Inject constructor(
                 voiceEnabled = preferences[PreferencesKeys.VOICE_ENABLED] ?: false,
                 notificationsEnabled = preferences[PreferencesKeys.NOTIFICATIONS_ENABLED] ?: true,
                 autoMemory = preferences[PreferencesKeys.AUTO_MEMORY] ?: true,
-                asciiAnimations = preferences[PreferencesKeys.ASCII_ANIMATIONS] ?: true,
                 llmConfig = LLMConfig(
                     modelName = preferences[PreferencesKeys.MODEL_NAME] ?: "llama2",
                     baseUrl = preferences[PreferencesKeys.OLLAMA_URL] ?: "http://localhost:11434",
@@ -159,12 +157,6 @@ class PreferencesManager @Inject constructor(
     suspend fun updateAutoMemory(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.AUTO_MEMORY] = enabled
-        }
-    }
-    
-    suspend fun updateAsciiAnimations(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.ASCII_ANIMATIONS] = enabled
         }
     }
     

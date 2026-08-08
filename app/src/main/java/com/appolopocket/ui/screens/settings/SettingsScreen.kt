@@ -93,9 +93,7 @@ fun SettingsScreen(
                 item {
                     AppearanceSection(
                         currentTheme = uiState.userPreferences.theme,
-                        asciiAnimations = uiState.userPreferences.asciiAnimations,
-                        onThemeChange = { viewModel.updateTheme(it) },
-                        onAsciiAnimationsChange = { viewModel.updateAsciiAnimations(it) }
+                        onThemeChange = { viewModel.updateTheme(it) }
                     )
                 }
                 
@@ -455,9 +453,7 @@ private fun ApprovalSection(
 @Composable
 private fun AppearanceSection(
     currentTheme: AppTheme,
-    asciiAnimations: Boolean,
-    onThemeChange: (AppTheme) -> Unit,
-    onAsciiAnimationsChange: (Boolean) -> Unit
+    onThemeChange: (AppTheme) -> Unit
 ) {
     SettingsSection(title = "Appearance") {
         // Theme selection
@@ -486,30 +482,6 @@ private fun AppearanceSection(
             }
         }
         
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        // ASCII animations toggle
-        SettingsRow(
-            label = "ASCII Animations",
-            description = "Show ASCII art transitions and decorations",
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.AutoAwesome,
-                    contentDescription = null,
-                    tint = VaporwaveColors.GoldenBronze
-                )
-            },
-            trailing = {
-                Switch(
-                    checked = asciiAnimations,
-                    onCheckedChange = onAsciiAnimationsChange,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = VaporwaveColors.NeonMagenta,
-                        checkedTrackColor = VaporwaveColors.NeonMagenta.copy(alpha = 0.3f)
-                    )
-                )
-            }
-        )
     }
 }
 

@@ -201,9 +201,8 @@ data class UserPreferences(
     val approvalMode: ApprovalMode = ApprovalMode.SMART_AUTO,
     val theme: AppTheme = AppTheme.VAPORWAVE,
     val voiceEnabled: Boolean = false,
-        val notificationsEnabled: Boolean = true,
+    val notificationsEnabled: Boolean = true,
     val autoMemory: Boolean = true,
-    val asciiAnimations: Boolean = true,
     val llmConfig: LLMConfig = LLMConfig()
 )
 

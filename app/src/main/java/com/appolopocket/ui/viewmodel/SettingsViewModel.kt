@@ -170,12 +170,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun updateAsciiAnimations(enabled: Boolean) {
-        viewModelScope.launch {
-            preferencesRepository.updateAsciiAnimations(enabled)
-        }
-    }
-
     fun startEditingPrompt(type: PromptType) {
         _uiState.update { it.copy(editingPromptType = type) }
     }

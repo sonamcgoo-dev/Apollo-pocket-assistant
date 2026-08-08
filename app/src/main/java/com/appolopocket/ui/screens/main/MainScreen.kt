@@ -1,13 +1,11 @@
 package com.appolopocket.ui.screens.main
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -39,12 +37,6 @@ fun MainScreen(
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                is ChatEvent.ShowAscii -> {
-                    // Handle ASCII animation display
-                }
-                is ChatEvent.ModeChange -> {
-                    // Handle mode change animation
-                }
                 is ChatEvent.Error -> {
                     // Show error snackbar
                 }
@@ -118,11 +110,6 @@ fun MainScreen(
                         streamedContent = uiState.streamedContent
                     )
                 }
-            }
-
-            // ASCII status overlay
-            if (uiState.showAsciiAnimation) {
-                AsciiAnimationOverlay(message = uiState.asciiMessage)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -510,32 +497,6 @@ private fun InputArea(
                     contentDescription = "Send"
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun AsciiAnimationOverlay(message: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = VaporwaveColors.GlassBackground,
-                shape = MaterialTheme.shapes.medium
-            )
-            .padding(16.dp)
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            LoadingIndicator()
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodySmall,
-                color = VaporwaveColors.TextSecondary
-            )
         }
     }
 }

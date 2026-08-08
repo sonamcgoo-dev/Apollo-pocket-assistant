@@ -291,7 +291,6 @@ class PreferencesRepositoryImpl @Inject constructor(
     override suspend fun updateVoiceEnabled(enabled: Boolean) = preferencesManager.updateVoiceEnabled(enabled)
     override suspend fun updateNotificationsEnabled(enabled: Boolean) = preferencesManager.updateNotificationsEnabled(enabled)
     override suspend fun updateAutoMemory(enabled: Boolean) = preferencesManager.updateAutoMemory(enabled)
-    override suspend fun updateAsciiAnimations(enabled: Boolean) = preferencesManager.updateAsciiAnimations(enabled)
     override suspend fun updateSystemPrompt(prompt: String) = preferencesManager.updateSystemPrompt(prompt)
     override suspend fun updateAgentPrompt(prompt: String) = preferencesManager.updateAgentPrompt(prompt)
     override suspend fun updatePersonalityPrompt(prompt: String) = preferencesManager.updatePersonalityPrompt(prompt)

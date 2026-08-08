@@ -147,20 +147,19 @@
 - **Popups:** Modal overlays with glassmorphism effect
 
 ### Key UI Components
-1. **Terminal View** - Scrolling message list with typewriter effect
+1. **Terminal View** - Scrolling message list with static text rendering
 2. **Command Input** - Bottom-positioned text field with auto-complete
 3. **Quick Tiles** - Floating panel: Voice, Camera, Files, Search, Settings
-4. **ASCII Art Animations** - Segway transitions, loading states, backgrounds
+4. **ASCII Art Presentation** - Vaporwave startup art with randomized Kanji/checkerboard motifs
 5. **Glassmorphic Cards** - Semi-transparent overlays for modals
-6. **Neon Glow Effects** - Subtle animated borders and shadows
+6. **Neon Glow Effects** - Static neon styling (non-animated)
 7. **Apollo Bust Icon** - Vaporwave-styled god Apollo as app icon
 
 ### ASCII Art Themes
-- App startup splash animation
-- Mode transitions (code mode, chat mode, automation mode)
-- Loading indicators
-- Background decorative elements
-- Success/failure celebrations
+- App startup splash generation (randomized per launch)
+- Apollo bust centerpiece in startup art
+- Vaporwave checkerboard and Kanji decorative accents
+- Static decorative ASCII elements for status and separators
 
 ## 5. Control Prompts Structure
 

@@ -49,7 +49,6 @@ interface PreferencesRepository {
     suspend fun updateVoiceEnabled(enabled: Boolean)
     suspend fun updateNotificationsEnabled(enabled: Boolean)
     suspend fun updateAutoMemory(enabled: Boolean)
-    suspend fun updateAsciiAnimations(enabled: Boolean)
     suspend fun updateSystemPrompt(prompt: String)
     suspend fun updateAgentPrompt(prompt: String)
     suspend fun updatePersonalityPrompt(prompt: String)
