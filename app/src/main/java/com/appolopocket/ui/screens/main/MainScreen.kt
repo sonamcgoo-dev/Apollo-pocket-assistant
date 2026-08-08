@@ -2,10 +2,12 @@ package com.appolopocket.ui.screens.main
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -32,6 +34,7 @@ fun MainScreen(
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val artSeed = remember { System.currentTimeMillis() }
 
     // Handle events
     LaunchedEffect(Unit) {
@@ -81,7 +84,7 @@ fun MainScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            VaporwaveAccentBanner()
+            VaporwaveAccentBanner(randomSeed = artSeed)
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -101,7 +104,7 @@ fun MainScreen(
             ) {
                 if (uiState.messages.isEmpty() && !uiState.isLoading) {
                     // Empty state
-                    EmptyStateView()
+                    EmptyStateView(randomSeed = artSeed)
                 } else {
                     MessagesList(
                         messages = uiState.messages,
@@ -125,9 +128,9 @@ fun MainScreen(
 
         // Quick tiles panel
         QuickTilePanel(
-            onVoiceClick = { /* TODO: Implement voice input */ },
-            onCameraClick = { /* TODO: Implement camera */ },
-            onFilesClick = { /* TODO: Implement file browser */ },
+            onVoiceClick = { viewModel.showUnavailableFeature("Voice input") },
+            onCameraClick = { viewModel.showUnavailableFeature("Camera tools") },
+            onFilesClick = { viewModel.showUnavailableFeature("File browser") },
             onSearchClick = { viewModel.setMode(ChatMode.SEARCH) },
             onSettingsClick = onNavigateToSettings,
             modifier = Modifier
@@ -349,11 +352,14 @@ private fun StreamingMessage(content: String) {
 }
 
 @Composable
-private fun EmptyStateView() {
-    val startupArt = remember { AsciiArt.generateVaporwaveStartupArt() }
+private fun EmptyStateView(randomSeed: Long) {
+    val startupArt = remember(randomSeed) { AsciiArt.generateVaporwaveStartupArt(randomSeed) }
 
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(vertical = 16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -393,10 +399,11 @@ private fun EmptyStateView() {
 }
 
 @Composable
-private fun VaporwaveAccentBanner() {
-    val kanjiLine = remember {
+private fun VaporwaveAccentBanner(randomSeed: Long) {
+    val kanjiLine = remember(randomSeed) {
+        val random = kotlin.random.Random(randomSeed)
         (1..6).joinToString("  ") {
-            listOf("愛", "夢", "神", "電", "夜", "空", "幻", "海").random()
+            listOf("愛", "夢", "神", "電", "夜", "空", "幻", "海").random(random)
         }
     }
     val checker = "▓░".repeat(24)

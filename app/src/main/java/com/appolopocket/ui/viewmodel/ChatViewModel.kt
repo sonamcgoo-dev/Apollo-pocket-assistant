@@ -195,6 +195,10 @@ class ChatViewModel @Inject constructor(
         _uiState.update { it.copy(error = null) }
     }
 
+    fun showUnavailableFeature(featureName: String) {
+        _uiState.update { it.copy(error = "$featureName is not available yet.") }
+    }
+
     override fun onCleared() {
         super.onCleared()
         streamingJob?.cancel()
