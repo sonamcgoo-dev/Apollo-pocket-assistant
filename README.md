@@ -11,13 +11,13 @@ Android native power-user assistant with a vaporwave terminal-style UI.
 
 ## Build, lint, and test
 
-From `/home/runner/work/Apollo-pocket-assistant/Apollo-pocket-assistant`:
+From the repository root:
 
 - Build debug APK: `./gradlew :app:assembleDebug`
 - Run lint: `./gradlew :app:lint`
 - Run unit tests: `./gradlew :app:testDebugUnitTest`
 
-GitHub Actions support is configured in `/home/runner/work/Apollo-pocket-assistant/Apollo-pocket-assistant/.github/workflows/android-ci.yml`, which sets up JDK 17 and the Android SDK before running the same Gradle tasks in CI.
+GitHub Actions support is configured in `.github/workflows/android-ci.yml`, which sets up JDK 17 and the Android SDK before running the same Gradle tasks in CI.
 
 ## Environment caveat
 
