@@ -103,6 +103,10 @@ class OllamaClient @Inject constructor(
         .readTimeout(120, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
         .build()
+
+    private val downloadClient = client.newBuilder()
+        .readTimeout(0, TimeUnit.MILLISECONDS)
+        .build()
     
     fun updateConfig(newConfig: LLMConfig) {
         config = newConfig
@@ -357,8 +361,8 @@ class OllamaClient @Inject constructor(
             return
         }
 
-        val modelsDir = File(appContext.filesDir, "models")
-        if (!modelsDir.exists() && !modelsDir.mkdirs()) {
+        val modelsDir = resolveModelsDir()
+        if (modelsDir == null) {
             collector.emit(ModelPullProgress.Error("Failed to create model directory"))
             return
         }
@@ -368,10 +372,11 @@ class OllamaClient @Inject constructor(
             .substringAfterLast('.', "")
             .takeIf { it.isNotBlank() } ?: "bin"
         val destination = File(modelsDir, "$safeName.$extension")
+        val tempDestination = File(modelsDir, "$safeName.$extension.part")
 
         try {
             val request = Request.Builder().url(downloadUrl).get().build()
-            client.newCall(request).execute().use { response ->
+            downloadClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
                     collector.emit(ModelPullProgress.Error("HTTP ${response.code}: ${response.message}"))
                     return
@@ -384,6 +389,16 @@ class OllamaClient @Inject constructor(
                 }
 
                 val totalBytes = body.contentLength().takeIf { it > 0 } ?: 0L
+                val usableSpace = modelsDir.usableSpace
+                if (totalBytes > 0 && usableSpace > 0 && usableSpace < totalBytes) {
+                    collector.emit(
+                        ModelPullProgress.Error(
+                            "Not enough free space to download model (${usableSpace}/${totalBytes} bytes available)"
+                        )
+                    )
+                    return
+                }
+
                 collector.emit(
                     ModelPullProgress.Update(
                         status = "Downloading",
@@ -394,8 +409,11 @@ class OllamaClient @Inject constructor(
                 )
 
                 var incompleteError: String? = null
+                if (tempDestination.exists()) {
+                    tempDestination.delete()
+                }
                 body.byteStream().use { input ->
-                    FileOutputStream(destination).use { output ->
+                    FileOutputStream(tempDestination).use { output ->
                         val buffer = ByteArray(256 * 1024)
                         var downloaded = 0L
                         var lastEmitted = 0L
@@ -427,8 +445,20 @@ class OllamaClient @Inject constructor(
 
                 val errorMessage = incompleteError
                 if (errorMessage != null) {
-                    destination.delete()
+                    tempDestination.delete()
                     collector.emit(ModelPullProgress.Error(errorMessage))
+                    return
+                }
+
+                if (destination.exists() && !destination.delete()) {
+                    tempDestination.delete()
+                    collector.emit(ModelPullProgress.Error("Failed to replace existing model file"))
+                    return
+                }
+
+                if (!tempDestination.renameTo(destination)) {
+                    tempDestination.delete()
+                    collector.emit(ModelPullProgress.Error("Failed to finalize model download"))
                     return
                 }
 
@@ -443,9 +473,18 @@ class OllamaClient @Inject constructor(
                 collector.emit(ModelPullProgress.Complete)
             }
         } catch (e: Exception) {
-            destination.delete()
+            tempDestination.delete()
             collector.emit(ModelPullProgress.Error(e.message ?: "Model download failed"))
         }
+    }
+
+    private fun resolveModelsDir(): File? {
+        val candidateDirectories = listOfNotNull(
+            appContext.getExternalFilesDir(null)?.let { File(it, "models") },
+            File(appContext.filesDir, "models")
+        )
+
+        return candidateDirectories.firstOrNull { it.exists() || it.mkdirs() }
     }
 
     private suspend fun checkOllamaConnection(): Boolean {
