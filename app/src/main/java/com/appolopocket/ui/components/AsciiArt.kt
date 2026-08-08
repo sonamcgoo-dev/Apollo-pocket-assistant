@@ -24,8 +24,8 @@ object AsciiArt {
     private val skylineSet = listOf("▁▂▃▄▅▆▇█", "█▇▆▅▄▃▂▁", "▂▄▆█▆▄▂", "▁▃▅▇█▇▅▃")
     private val checkerSet = listOf("▓░", "░▓", "▞▚", "▚▞", "◢◤", "◥◣")
 
-    fun generateVaporwaveStartupArt(seed: Long = System.currentTimeMillis()): String {
-        val random = Random(seed)
+    fun generateVaporwaveStartupArt(randomSeed: Long = System.currentTimeMillis()): String {
+        val random = Random(randomSeed)
         val headerKanji = (1..8).joinToString(" ") { kanjiSet.random(random) }
         val footerKanji = (1..8).joinToString(" ") { kanjiSet.random(random) }
         val skyline = skylineSet.random(random)
@@ -203,7 +203,7 @@ fun LoadingIndicator(
     style: Int = 0
 ) {
     Text(
-        text = AsciiArt.loadingFrames[style].first(),
+        text = "[SYSTEM BUSY]",
         modifier = modifier,
         style = MaterialTheme.typography.bodyMedium.copy(
             fontFamily = FontFamily.Monospace
