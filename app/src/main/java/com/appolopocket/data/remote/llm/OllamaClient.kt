@@ -420,7 +420,6 @@ class OllamaClient @Inject constructor(
                         }
 
                         if (totalBytes > 0 && downloaded < totalBytes) {
-                            destination.delete()
                             incompleteError = "Download incomplete: $downloaded/$totalBytes bytes received"
                         }
                     }
@@ -428,6 +427,7 @@ class OllamaClient @Inject constructor(
 
                 val errorMessage = incompleteError
                 if (errorMessage != null) {
+                    destination.delete()
                     collector.emit(ModelPullProgress.Error(errorMessage))
                     return
                 }
