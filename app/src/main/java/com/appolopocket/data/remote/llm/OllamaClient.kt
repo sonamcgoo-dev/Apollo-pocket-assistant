@@ -105,7 +105,7 @@ class OllamaClient @Inject constructor(
         .build()
 
     private val downloadClient = client.newBuilder()
-        .readTimeout(0, TimeUnit.MILLISECONDS)
+        .readTimeout(0, TimeUnit.SECONDS)
         .build()
     
     fun updateConfig(newConfig: LLMConfig) {
@@ -390,7 +390,7 @@ class OllamaClient @Inject constructor(
 
                 val totalBytes = body.contentLength().takeIf { it > 0 } ?: 0L
                 val usableSpace = modelsDir.usableSpace
-                if (totalBytes > 0 && usableSpace > 0 && usableSpace < totalBytes) {
+                if (totalBytes > 0 && usableSpace < totalBytes) {
                     collector.emit(
                         ModelPullProgress.Error(
                             "Not enough free space to download model (${usableSpace}/${totalBytes} bytes available)"
