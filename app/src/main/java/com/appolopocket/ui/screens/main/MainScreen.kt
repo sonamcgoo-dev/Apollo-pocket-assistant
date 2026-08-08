@@ -1,7 +1,5 @@
 package com.appolopocket.ui.screens.main
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
@@ -16,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.appolopocket.domain.model.Message
@@ -52,7 +51,7 @@ fun MainScreen(
                 ChatEvent.ScrollToBottom -> {
                     if (uiState.messages.isNotEmpty()) {
                         coroutineScope.launch {
-                            listState.animateScrollToItem(uiState.messages.size - 1)
+                            listState.scrollToItem(uiState.messages.size - 1)
                         }
                     }
                 }
@@ -63,7 +62,7 @@ fun MainScreen(
     // Auto-scroll when new messages arrive
     LaunchedEffect(uiState.messages.size) {
         if (uiState.messages.isNotEmpty()) {
-            listState.animateScrollToItem(uiState.messages.size - 1)
+            listState.scrollToItem(uiState.messages.size - 1)
         }
     }
 
@@ -89,6 +88,10 @@ fun MainScreen(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            VaporwaveAccentBanner()
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Mode tabs
             ModeTabs(
@@ -117,12 +120,8 @@ fun MainScreen(
                 }
             }
 
-            // ASCII animation overlay
-            AnimatedVisibility(
-                visible = uiState.showAsciiAnimation,
-                enter = fadeIn() + slideInVertically(),
-                exit = fadeOut() + slideOutVertically()
-            ) {
+            // ASCII status overlay
+            if (uiState.showAsciiAnimation) {
                 AsciiAnimationOverlay(message = uiState.asciiMessage)
             }
 
@@ -329,17 +328,6 @@ private fun MessagesList(
 
 @Composable
 private fun StreamingMessage(content: String) {
-    val infiniteTransition = rememberInfiniteTransition(label = "cursor")
-    val cursorAlpha by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(500),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "cursorAlpha"
-    )
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -364,9 +352,9 @@ private fun StreamingMessage(content: String) {
             )
             Text(
                 text = "▌",
-                color = VaporwaveColors.NeonMagenta.copy(alpha = cursorAlpha),
+                color = VaporwaveColors.NeonMagenta,
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                    fontFamily = FontFamily.Monospace
                 )
             )
         }
@@ -375,20 +363,22 @@ private fun StreamingMessage(content: String) {
 
 @Composable
 private fun EmptyStateView() {
+    val startupArt = remember { AsciiArt.generateVaporwaveStartupArt() }
+
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         AnimatedAsciiText(
-            text = AsciiArt.apolloBust,
+            text = startupArt,
             color = VaporwaveColors.NeonMagenta
         )
         
         Spacer(modifier = Modifier.height(24.dp))
         
         Text(
-            text = "Welcome to Appolo Pocket",
+            text = "WELCOME TO APOLLO POCKET",
             style = MaterialTheme.typography.headlineSmall,
             color = VaporwaveColors.TextPrimary
         )
@@ -396,7 +386,7 @@ private fun EmptyStateView() {
         Spacer(modifier = Modifier.height(8.dp))
         
         Text(
-            text = "Your AI Super Assistant",
+            text = "VAPORWAVE AI SUPER ASSISTANT",
             style = MaterialTheme.typography.bodyMedium,
             color = VaporwaveColors.TextSecondary
         )
@@ -411,6 +401,47 @@ private fun EmptyStateView() {
             text = "Type a message to begin...",
             style = MaterialTheme.typography.bodySmall,
             color = VaporwaveColors.TextTertiary
+        )
+    }
+}
+
+@Composable
+private fun VaporwaveAccentBanner() {
+    val kanjiLine = remember {
+        (1..6).joinToString("  ") {
+            listOf("愛", "夢", "神", "電", "夜", "空", "幻", "海").random()
+        }
+    }
+    val checker = "▓░".repeat(24)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = VaporwaveColors.GlassBackground,
+                shape = MaterialTheme.shapes.medium
+            )
+            .border(
+                width = 1.dp,
+                color = VaporwaveColors.ElectricCyan.copy(alpha = 0.4f),
+                shape = MaterialTheme.shapes.medium
+            )
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = checker,
+            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+            color = VaporwaveColors.NeonMagenta.copy(alpha = 0.7f)
+        )
+        Text(
+            text = kanjiLine,
+            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+            color = VaporwaveColors.ElectricCyan
+        )
+        Text(
+            text = checker.reversed(),
+            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+            color = VaporwaveColors.NeonMagenta.copy(alpha = 0.7f)
         )
     }
 }

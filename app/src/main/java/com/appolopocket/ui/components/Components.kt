@@ -1,7 +1,5 @@
 package com.appolopocket.ui.components
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -18,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -334,11 +331,7 @@ fun QuickTilePanel(
         modifier = modifier,
         horizontalAlignment = Alignment.End
     ) {
-        AnimatedVisibility(
-            visible = isExpanded,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically()
-        ) {
+        if (isExpanded) {
             Column(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -394,15 +387,9 @@ fun QuickTilePanel(
             contentColor = VaporwaveColors.DeepNight,
             shape = CircleShape
         ) {
-            val rotation by animateFloatAsState(
-                targetValue = if (isExpanded) 45f else 0f,
-                animationSpec = tween(durationMillis = 300),
-                label = "rotation"
-            )
             Icon(
                 imageVector = if (isExpanded) Icons.Default.Close else Icons.Default.Add,
-                contentDescription = if (isExpanded) "Close menu" else "Open menu",
-                modifier = Modifier.graphicsLayer { this.rotationZ = rotation }
+                contentDescription = if (isExpanded) "Close menu" else "Open menu"
             )
         }
     }
