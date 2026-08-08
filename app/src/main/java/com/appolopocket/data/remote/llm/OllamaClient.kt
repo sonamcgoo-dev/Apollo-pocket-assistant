@@ -285,11 +285,11 @@ class OllamaClient @Inject constructor(
 
             val response = client.newCall(request).execute()
             if (!response.isSuccessful) {
-                return Result.failure(Exception("HTTP ${response.code}: ${response.message}"))
+                return@withContext Result.failure(Exception("HTTP ${response.code}: ${response.message}"))
             }
 
             val body = response.body?.string()
-                ?: return Result.failure(Exception("Empty response body"))
+                ?: return@withContext Result.failure(Exception("Empty response body"))
 
             val modelsResponse = json.decodeFromString<OllamaModelsResponse>(body)
             Result.success(modelsResponse.models)
@@ -357,7 +357,11 @@ class OllamaClient @Inject constructor(
             return
         }
 
-        val modelsDir = File(appContext.filesDir, "models").apply { mkdirs() }
+        val modelsDir = File(appContext.filesDir, "models")
+        if (!modelsDir.exists() && !modelsDir.mkdirs()) {
+            collector.emit(ModelPullProgress.Error("Failed to create model directory"))
+            return
+        }
         val safeName = modelName.replace(Regex("[^A-Za-z0-9._-]"), "_")
         val extension = downloadUrl
             .substringBefore('?')
@@ -378,7 +382,7 @@ class OllamaClient @Inject constructor(
             return
         }
 
-        val totalBytes = body.contentLength().takeIf { it > 0 } ?: selectedModel.size
+        val totalBytes = body.contentLength().takeIf { it > 0 } ?: 0L
         collector.emit(
             ModelPullProgress.Update(
                 status = "Downloading",
@@ -398,7 +402,8 @@ class OllamaClient @Inject constructor(
                     if (read == -1) break
                     output.write(buffer, 0, read)
                     downloaded += read
-                    val shouldEmit = downloaded == totalBytes || downloaded - lastEmitted >= (4 * 1024 * 1024)
+                    val shouldEmit = (totalBytes > 0 && downloaded == totalBytes) ||
+                        downloaded - lastEmitted >= (4 * 1024 * 1024)
                     if (shouldEmit) {
                         collector.emit(
                             ModelPullProgress.Update(
@@ -413,12 +418,13 @@ class OllamaClient @Inject constructor(
                 }
 
                 if (totalBytes > 0 && downloaded < totalBytes) {
+                    destination.delete()
                     collector.emit(
                         ModelPullProgress.Error(
                             "Download incomplete: $downloaded/$totalBytes bytes received"
                         )
                     )
-                    return
+                    return@downloadRemoteModel
                 }
             }
         }
@@ -434,22 +440,24 @@ class OllamaClient @Inject constructor(
         collector.emit(ModelPullProgress.Complete)
     }
 
-    private fun checkOllamaConnection(): Boolean {
+    private suspend fun checkOllamaConnection(): Boolean {
         return checkUrl("${config.baseUrl}/api/tags")
     }
 
-    private fun checkUrl(url: String): Boolean {
-        return try {
-            val request = Request.Builder()
-                .url(url)
-                .get()
-                .build()
+    private suspend fun checkUrl(url: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val request = Request.Builder()
+                    .url(url)
+                    .get()
+                    .build()
 
-            client.newCall(request).execute().use { response ->
-                response.isSuccessful
+                client.newCall(request).execute().use { response ->
+                    response.isSuccessful
+                }
+            } catch (_: Exception) {
+                false
             }
-        } catch (_: Exception) {
-            false
         }
     }
     
