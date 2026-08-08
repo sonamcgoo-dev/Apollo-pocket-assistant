@@ -17,7 +17,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.appolopocket.data.remote.llm.OllamaModel
 import com.appolopocket.domain.model.ApprovalMode
 import com.appolopocket.domain.model.AppTheme
+import com.appolopocket.domain.model.MemorySettings
 import com.appolopocket.domain.model.ModelSource
+import com.appolopocket.domain.model.NotificationPriority
+import com.appolopocket.domain.model.NotificationSettings
+import com.appolopocket.domain.model.PrivacySettings
 import com.appolopocket.ui.components.*
 import com.appolopocket.ui.theme.VaporwaveColors
 import com.appolopocket.ui.viewmodel.PromptType
@@ -77,6 +81,11 @@ fun SettingsScreen(
                         onBaseUrlChange = { viewModel.updateBaseUrl(it) },
                         onTemperatureChange = { viewModel.updateTemperature(it) },
                         onMaxTokensChange = { viewModel.updateMaxTokens(it) },
+                        onContextWindowChange = { viewModel.updateContextWindow(it) },
+                        onTopPChange = { viewModel.updateTopP(it) },
+                        onTopKChange = { viewModel.updateTopK(it) },
+                        onRepeatPenaltyChange = { viewModel.updateRepeatPenalty(it) },
+                        onStreamingChange = { viewModel.updateStreaming(it) },
                         onPullModel = { viewModel.pullModel(it) }
                     )
                 }
@@ -113,9 +122,38 @@ fun SettingsScreen(
                         voiceEnabled = uiState.userPreferences.voiceEnabled,
                         notificationsEnabled = uiState.userPreferences.notificationsEnabled,
                         autoMemory = uiState.userPreferences.autoMemory,
+                        hapticFeedback = uiState.userPreferences.hapticFeedback,
+                        keepScreenOn = uiState.userPreferences.keepScreenOn,
                         onVoiceEnabledChange = { viewModel.updateVoiceEnabled(it) },
                         onNotificationsEnabledChange = { viewModel.updateNotificationsEnabled(it) },
-                        onAutoMemoryChange = { viewModel.updateAutoMemory(it) }
+                        onAutoMemoryChange = { viewModel.updateAutoMemory(it) },
+                        onHapticFeedbackChange = { viewModel.updateHapticFeedback(it) },
+                        onKeepScreenOnChange = { viewModel.updateKeepScreenOn(it) }
+                    )
+                }
+                
+                // Notification Settings
+                item {
+                    NotificationSettingsSection(
+                        settings = uiState.userPreferences.notificationSettings,
+                        notificationsEnabled = uiState.userPreferences.notificationsEnabled,
+                        onSettingsChange = { viewModel.updateNotificationSettings(it) }
+                    )
+                }
+                
+                // Memory Settings
+                item {
+                    MemorySettingsSection(
+                        settings = uiState.userPreferences.memorySettings,
+                        onSettingsChange = { viewModel.updateMemorySettings(it) }
+                    )
+                }
+                
+                // Privacy Settings
+                item {
+                    PrivacySettingsSection(
+                        settings = uiState.userPreferences.privacySettings,
+                        onSettingsChange = { viewModel.updatePrivacySettings(it) }
                     )
                 }
                 
@@ -255,6 +293,11 @@ private fun LLMSettingsSection(
     onBaseUrlChange: (String) -> Unit,
     onTemperatureChange: (Float) -> Unit,
     onMaxTokensChange: (Int) -> Unit,
+    onContextWindowChange: (Int) -> Unit,
+    onTopPChange: (Float) -> Unit,
+    onTopKChange: (Int) -> Unit,
+    onRepeatPenaltyChange: (Float) -> Unit,
+    onStreamingChange: (Boolean) -> Unit,
     onPullModel: (String) -> Unit
 ) {
     var baseUrlDraft by remember(config.baseUrl) { mutableStateOf(config.baseUrl) }
@@ -276,7 +319,14 @@ private fun LLMSettingsSection(
                 FilterChip(
                     selected = config.modelSource == source,
                     onClick = { onModelSourceChange(source) },
-                    label = { Text(source.name.replace("_", " ")) },
+                    label = {
+                        Text(when (source) {
+                            ModelSource.OLLAMA -> "Ollama"
+                            ModelSource.HUGGING_FACE -> "HuggingFace"
+                            ModelSource.GITHUB -> "GitHub"
+                            ModelSource.FDROID -> "F-Droid"
+                        })
+                    },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = VaporwaveColors.NeonMagenta.copy(alpha = 0.2f),
                         selectedLabelColor = VaporwaveColors.NeonMagenta
@@ -285,7 +335,12 @@ private fun LLMSettingsSection(
             }
         }
         Text(
-            text = "Source controls where models are downloaded from.",
+            text = when (config.modelSource) {
+                ModelSource.OLLAMA -> "Runs models locally via Ollama inference server."
+                ModelSource.HUGGING_FACE -> "Downloads GGUF models from Hugging Face Hub."
+                ModelSource.GITHUB -> "Fetches models from GitHub-hosted repositories."
+                ModelSource.FDROID -> "Uses FOSS models compatible with F-Droid distribution."
+            },
             style = MaterialTheme.typography.bodySmall,
             color = VaporwaveColors.TextSecondary
         )
@@ -362,15 +417,40 @@ private fun LLMSettingsSection(
                 text = "Remote catalog mode uses built-in model links for ${config.modelSource.name.replace("_", " ")}.",
                 style = MaterialTheme.typography.bodySmall,
                 color = VaporwaveColors.TextSecondary
-            }
+            )
         }
+
+        HorizontalDivider(color = VaporwaveColors.GlassyPurple)
+
+        // Streaming toggle
+        SettingsRow(
+            label = "Streaming",
+            description = "Stream tokens as they are generated",
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Bolt,
+                    contentDescription = null,
+                    tint = VaporwaveColors.VaporwavePurple
+                )
+            },
+            trailing = {
+                Switch(
+                    checked = config.stream,
+                    onCheckedChange = onStreamingChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = VaporwaveColors.NeonMagenta,
+                        checkedTrackColor = VaporwaveColors.NeonMagenta.copy(alpha = 0.3f)
+                    )
+                )
+            }
+        )
 
         HorizontalDivider(color = VaporwaveColors.GlassyPurple)
 
         // Temperature slider
         SettingsRow(
             label = "Temperature",
-            description = String.format("%.2f", config.temperature),
+            description = String.format("%.2f  —  randomness of output", config.temperature),
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Thermostat,
@@ -391,13 +471,95 @@ private fun LLMSettingsSection(
                 )
             }
         )
-        
+
         HorizontalDivider(color = VaporwaveColors.GlassyPurple)
-        
+
+        // Top-P slider
+        SettingsRow(
+            label = "Top-P",
+            description = String.format("%.2f  —  nucleus sampling cutoff", config.topP),
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.FilterList,
+                    contentDescription = null,
+                    tint = VaporwaveColors.VaporwavePurple
+                )
+            },
+            trailing = {
+                Slider(
+                    value = config.topP,
+                    onValueChange = onTopPChange,
+                    valueRange = 0f..1f,
+                    modifier = Modifier.width(150.dp),
+                    colors = SliderDefaults.colors(
+                        thumbColor = VaporwaveColors.NeonMagenta,
+                        activeTrackColor = VaporwaveColors.NeonMagenta
+                    )
+                )
+            }
+        )
+
+        HorizontalDivider(color = VaporwaveColors.GlassyPurple)
+
+        // Top-K slider
+        SettingsRow(
+            label = "Top-K",
+            description = "${config.topK}  —  top token candidates",
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.FormatListBulleted,
+                    contentDescription = null,
+                    tint = VaporwaveColors.VaporwavePurple
+                )
+            },
+            trailing = {
+                Slider(
+                    value = config.topK.toFloat(),
+                    onValueChange = { onTopKChange(it.toInt()) },
+                    valueRange = 1f..100f,
+                    steps = 98,
+                    modifier = Modifier.width(150.dp),
+                    colors = SliderDefaults.colors(
+                        thumbColor = VaporwaveColors.NeonMagenta,
+                        activeTrackColor = VaporwaveColors.NeonMagenta
+                    )
+                )
+            }
+        )
+
+        HorizontalDivider(color = VaporwaveColors.GlassyPurple)
+
+        // Repeat Penalty slider
+        SettingsRow(
+            label = "Repeat Penalty",
+            description = String.format("%.2f  —  penalise repeated tokens", config.repeatPenalty),
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Repeat,
+                    contentDescription = null,
+                    tint = VaporwaveColors.VaporwavePurple
+                )
+            },
+            trailing = {
+                Slider(
+                    value = config.repeatPenalty,
+                    onValueChange = onRepeatPenaltyChange,
+                    valueRange = 1f..2f,
+                    modifier = Modifier.width(150.dp),
+                    colors = SliderDefaults.colors(
+                        thumbColor = VaporwaveColors.NeonMagenta,
+                        activeTrackColor = VaporwaveColors.NeonMagenta
+                    )
+                )
+            }
+        )
+
+        HorizontalDivider(color = VaporwaveColors.GlassyPurple)
+
         // Max tokens
         SettingsRow(
             label = "Max Tokens",
-            description = config.maxTokens.toString(),
+            description = "${config.maxTokens}  —  maximum output length",
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.TextFields,
@@ -411,6 +573,34 @@ private fun LLMSettingsSection(
                     onValueChange = { onMaxTokensChange(it.toInt()) },
                     valueRange = 256f..8192f,
                     steps = 6,
+                    modifier = Modifier.width(150.dp),
+                    colors = SliderDefaults.colors(
+                        thumbColor = VaporwaveColors.NeonMagenta,
+                        activeTrackColor = VaporwaveColors.NeonMagenta
+                    )
+                )
+            }
+        )
+
+        HorizontalDivider(color = VaporwaveColors.GlassyPurple)
+
+        // Context window
+        SettingsRow(
+            label = "Context Window",
+            description = "${config.contextWindow} tokens",
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.ViewList,
+                    contentDescription = null,
+                    tint = VaporwaveColors.VaporwavePurple
+                )
+            },
+            trailing = {
+                Slider(
+                    value = config.contextWindow.toFloat(),
+                    onValueChange = { onContextWindowChange(it.toInt()) },
+                    valueRange = 512f..32768f,
+                    steps = 5,
                     modifier = Modifier.width(150.dp),
                     colors = SliderDefaults.colors(
                         thumbColor = VaporwaveColors.NeonMagenta,
@@ -532,9 +722,13 @@ private fun GeneralSection(
     voiceEnabled: Boolean,
     notificationsEnabled: Boolean,
     autoMemory: Boolean,
+    hapticFeedback: Boolean,
+    keepScreenOn: Boolean,
     onVoiceEnabledChange: (Boolean) -> Unit,
     onNotificationsEnabledChange: (Boolean) -> Unit,
-    onAutoMemoryChange: (Boolean) -> Unit
+    onAutoMemoryChange: (Boolean) -> Unit,
+    onHapticFeedbackChange: (Boolean) -> Unit,
+    onKeepScreenOnChange: (Boolean) -> Unit
 ) {
     SettingsSection(title = "General") {
         SettingsRow(
@@ -599,6 +793,331 @@ private fun GeneralSection(
                 Switch(
                     checked = autoMemory,
                     onCheckedChange = onAutoMemoryChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = VaporwaveColors.NeonMagenta,
+                        checkedTrackColor = VaporwaveColors.NeonMagenta.copy(alpha = 0.3f)
+                    )
+                )
+            }
+        )
+
+        HorizontalDivider(color = VaporwaveColors.GlassyPurple)
+
+        SettingsRow(
+            label = "Haptic Feedback",
+            description = "Vibrate on interactions",
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Vibration,
+                    contentDescription = null,
+                    tint = VaporwaveColors.VaporwavePurple
+                )
+            },
+            trailing = {
+                Switch(
+                    checked = hapticFeedback,
+                    onCheckedChange = onHapticFeedbackChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = VaporwaveColors.NeonMagenta,
+                        checkedTrackColor = VaporwaveColors.NeonMagenta.copy(alpha = 0.3f)
+                    )
+                )
+            }
+        )
+
+        HorizontalDivider(color = VaporwaveColors.GlassyPurple)
+
+        SettingsRow(
+            label = "Keep Screen On",
+            description = "Prevent screen sleep during inference",
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.StayCurrentPortrait,
+                    contentDescription = null,
+                    tint = VaporwaveColors.VaporwavePurple
+                )
+            },
+            trailing = {
+                Switch(
+                    checked = keepScreenOn,
+                    onCheckedChange = onKeepScreenOnChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = VaporwaveColors.NeonMagenta,
+                        checkedTrackColor = VaporwaveColors.NeonMagenta.copy(alpha = 0.3f)
+                    )
+                )
+            }
+        )
+    }
+}
+
+@Composable
+private fun NotificationSettingsSection(
+    settings: NotificationSettings,
+    notificationsEnabled: Boolean,
+    onSettingsChange: (NotificationSettings) -> Unit
+) {
+    SettingsSection(title = "Notification Settings") {
+        Text(
+            text = "Priority",
+            style = MaterialTheme.typography.bodyMedium,
+            color = VaporwaveColors.TextPrimary
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+        ) {
+            NotificationPriority.entries.forEach { priority ->
+                FilterChip(
+                    selected = settings.priority == priority,
+                    onClick = { onSettingsChange(settings.copy(priority = priority)) },
+                    label = { Text(priority.name) },
+                    enabled = notificationsEnabled,
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = VaporwaveColors.NeonMagenta.copy(alpha = 0.2f),
+                        selectedLabelColor = VaporwaveColors.NeonMagenta
+                    )
+                )
+            }
+        }
+
+        HorizontalDivider(color = VaporwaveColors.GlassyPurple)
+
+        SettingsRow(
+            label = "Quiet Hours",
+            description = if (settings.quietHoursEnabled)
+                "Silenced ${settings.quietHoursStart}:00 – ${settings.quietHoursEnd}:00"
+            else
+                "Notifications always active",
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.DoNotDisturb,
+                    contentDescription = null,
+                    tint = VaporwaveColors.VaporwavePurple
+                )
+            },
+            trailing = {
+                Switch(
+                    checked = settings.quietHoursEnabled,
+                    onCheckedChange = { onSettingsChange(settings.copy(quietHoursEnabled = it)) },
+                    enabled = notificationsEnabled,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = VaporwaveColors.NeonMagenta,
+                        checkedTrackColor = VaporwaveColors.NeonMagenta.copy(alpha = 0.3f)
+                    )
+                )
+            }
+        )
+
+        if (settings.quietHoursEnabled && notificationsEnabled) {
+            HorizontalDivider(color = VaporwaveColors.GlassyPurple)
+            SettingsRow(
+                label = "Start Hour",
+                description = "${settings.quietHoursStart}:00",
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Bedtime,
+                        contentDescription = null,
+                        tint = VaporwaveColors.VaporwavePurple
+                    )
+                },
+                trailing = {
+                    Slider(
+                        value = settings.quietHoursStart.toFloat(),
+                        onValueChange = { onSettingsChange(settings.copy(quietHoursStart = it.toInt())) },
+                        valueRange = 0f..23f,
+                        steps = 22,
+                        modifier = Modifier.width(150.dp),
+                        colors = SliderDefaults.colors(
+                            thumbColor = VaporwaveColors.NeonMagenta,
+                            activeTrackColor = VaporwaveColors.NeonMagenta
+                        )
+                    )
+                }
+            )
+            HorizontalDivider(color = VaporwaveColors.GlassyPurple)
+            SettingsRow(
+                label = "End Hour",
+                description = "${settings.quietHoursEnd}:00",
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.WbSunny,
+                        contentDescription = null,
+                        tint = VaporwaveColors.VaporwavePurple
+                    )
+                },
+                trailing = {
+                    Slider(
+                        value = settings.quietHoursEnd.toFloat(),
+                        onValueChange = { onSettingsChange(settings.copy(quietHoursEnd = it.toInt())) },
+                        valueRange = 0f..23f,
+                        steps = 22,
+                        modifier = Modifier.width(150.dp),
+                        colors = SliderDefaults.colors(
+                            thumbColor = VaporwaveColors.NeonMagenta,
+                            activeTrackColor = VaporwaveColors.NeonMagenta
+                        )
+                    )
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun MemorySettingsSection(
+    settings: MemorySettings,
+    onSettingsChange: (MemorySettings) -> Unit
+) {
+    SettingsSection(title = "Memory Settings") {
+        SettingsRow(
+            label = "Max Entries",
+            description = "${settings.maxEntries} memories stored",
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Storage,
+                    contentDescription = null,
+                    tint = VaporwaveColors.VaporwavePurple
+                )
+            },
+            trailing = {
+                Slider(
+                    value = settings.maxEntries.toFloat(),
+                    onValueChange = { onSettingsChange(settings.copy(maxEntries = it.toInt())) },
+                    valueRange = 50f..5000f,
+                    steps = 9,
+                    modifier = Modifier.width(150.dp),
+                    colors = SliderDefaults.colors(
+                        thumbColor = VaporwaveColors.NeonMagenta,
+                        activeTrackColor = VaporwaveColors.NeonMagenta
+                    )
+                )
+            }
+        )
+
+        HorizontalDivider(color = VaporwaveColors.GlassyPurple)
+
+        SettingsRow(
+            label = "Retention",
+            description = "${settings.retentionDays} days",
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Schedule,
+                    contentDescription = null,
+                    tint = VaporwaveColors.VaporwavePurple
+                )
+            },
+            trailing = {
+                Slider(
+                    value = settings.retentionDays.toFloat(),
+                    onValueChange = { onSettingsChange(settings.copy(retentionDays = it.toInt())) },
+                    valueRange = 1f..365f,
+                    steps = 11,
+                    modifier = Modifier.width(150.dp),
+                    colors = SliderDefaults.colors(
+                        thumbColor = VaporwaveColors.NeonMagenta,
+                        activeTrackColor = VaporwaveColors.NeonMagenta
+                    )
+                )
+            }
+        )
+
+        HorizontalDivider(color = VaporwaveColors.GlassyPurple)
+
+        SettingsRow(
+            label = "Clear on Exit",
+            description = "Wipe memory when app closes",
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.DeleteSweep,
+                    contentDescription = null,
+                    tint = VaporwaveColors.VaporwavePurple
+                )
+            },
+            trailing = {
+                Switch(
+                    checked = settings.clearOnExit,
+                    onCheckedChange = { onSettingsChange(settings.copy(clearOnExit = it)) },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = VaporwaveColors.NeonMagenta,
+                        checkedTrackColor = VaporwaveColors.NeonMagenta.copy(alpha = 0.3f)
+                    )
+                )
+            }
+        )
+    }
+}
+
+@Composable
+private fun PrivacySettingsSection(
+    settings: PrivacySettings,
+    onSettingsChange: (PrivacySettings) -> Unit
+) {
+    SettingsSection(title = "Privacy & Data") {
+        SettingsRow(
+            label = "Analytics",
+            description = "Share anonymous usage data",
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Analytics,
+                    contentDescription = null,
+                    tint = VaporwaveColors.VaporwavePurple
+                )
+            },
+            trailing = {
+                Switch(
+                    checked = settings.analyticsEnabled,
+                    onCheckedChange = { onSettingsChange(settings.copy(analyticsEnabled = it)) },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = VaporwaveColors.NeonMagenta,
+                        checkedTrackColor = VaporwaveColors.NeonMagenta.copy(alpha = 0.3f)
+                    )
+                )
+            }
+        )
+
+        HorizontalDivider(color = VaporwaveColors.GlassyPurple)
+
+        SettingsRow(
+            label = "Crash Reporting",
+            description = "Send crash reports automatically",
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.BugReport,
+                    contentDescription = null,
+                    tint = VaporwaveColors.VaporwavePurple
+                )
+            },
+            trailing = {
+                Switch(
+                    checked = settings.crashReportingEnabled,
+                    onCheckedChange = { onSettingsChange(settings.copy(crashReportingEnabled = it)) },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = VaporwaveColors.NeonMagenta,
+                        checkedTrackColor = VaporwaveColors.NeonMagenta.copy(alpha = 0.3f)
+                    )
+                )
+            }
+        )
+
+        HorizontalDivider(color = VaporwaveColors.GlassyPurple)
+
+        SettingsRow(
+            label = "Clear History on Exit",
+            description = "Delete all conversations when app closes",
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.History,
+                    contentDescription = null,
+                    tint = VaporwaveColors.VaporwavePurple
+                )
+            },
+            trailing = {
+                Switch(
+                    checked = settings.clearHistoryOnExit,
+                    onCheckedChange = { onSettingsChange(settings.copy(clearHistoryOnExit = it)) },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = VaporwaveColors.NeonMagenta,
                         checkedTrackColor = VaporwaveColors.NeonMagenta.copy(alpha = 0.3f)

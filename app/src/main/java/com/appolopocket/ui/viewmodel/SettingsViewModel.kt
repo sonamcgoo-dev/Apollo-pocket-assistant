@@ -3,8 +3,7 @@ package com.appolopocket.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.appolopocket.data.remote.llm.OllamaModel
-import com.appolopocket.domain.model.*
-import com.appolopocket.domain.repository.LLMRepository
+import com.appolopocket.domain.model.*import com.appolopocket.domain.repository.LLMRepository
 import com.appolopocket.domain.repository.PreferencesRepository
 import com.appolopocket.domain.usecase.GetAvailableModelsUseCase
 import com.appolopocket.domain.usecase.PullModelUseCase
@@ -167,6 +166,61 @@ class SettingsViewModel @Inject constructor(
     fun updateAutoMemory(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.updateAutoMemory(enabled)
+        }
+    }
+
+    fun updateHapticFeedback(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updateHapticFeedback(enabled)
+        }
+    }
+
+    fun updateKeepScreenOn(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updateKeepScreenOn(enabled)
+        }
+    }
+
+    fun updateTopP(topP: Float) {
+        val currentConfig = _uiState.value.userPreferences.llmConfig
+        updateLLMConfig(currentConfig.copy(topP = topP))
+    }
+
+    fun updateTopK(topK: Int) {
+        val currentConfig = _uiState.value.userPreferences.llmConfig
+        updateLLMConfig(currentConfig.copy(topK = topK))
+    }
+
+    fun updateRepeatPenalty(penalty: Float) {
+        val currentConfig = _uiState.value.userPreferences.llmConfig
+        updateLLMConfig(currentConfig.copy(repeatPenalty = penalty))
+    }
+
+    fun updateContextWindow(size: Int) {
+        val currentConfig = _uiState.value.userPreferences.llmConfig
+        updateLLMConfig(currentConfig.copy(contextWindow = size))
+    }
+
+    fun updateStreaming(enabled: Boolean) {
+        val currentConfig = _uiState.value.userPreferences.llmConfig
+        updateLLMConfig(currentConfig.copy(stream = enabled))
+    }
+
+    fun updateMemorySettings(settings: MemorySettings) {
+        viewModelScope.launch {
+            preferencesRepository.updateMemorySettings(settings)
+        }
+    }
+
+    fun updatePrivacySettings(settings: PrivacySettings) {
+        viewModelScope.launch {
+            preferencesRepository.updatePrivacySettings(settings)
+        }
+    }
+
+    fun updateNotificationSettings(settings: NotificationSettings) {
+        viewModelScope.launch {
+            preferencesRepository.updateNotificationSettings(settings)
         }
     }
 
