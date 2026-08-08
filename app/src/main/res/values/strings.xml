@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Appolo Pocket</string>
+    <string name="app_description">Your AI Super Assistant</string>
+    
+    <!-- Main Screen -->
+    <string name="input_hint">Ask Appolo anything...</string>
+    <string name="send">Send</string>
+    <string name="voice_input">Voice Input</string>
+    <string name="quick_actions">Quick Actions</string>
+    
+    <!-- Settings -->
+    <string name="settings">Settings</string>
+    <string name="general">General</string>
+    <string name="appearance">Appearance</string>
+    <string name="prompts">Prompts</string>
+    <string name="llm_settings">LLM Settings</string>
+    <string name="permissions">Permissions</string>
+    <string name="about">About</string>
+    
+    <!-- LLM Settings -->
+    <string name="model_selection">Model Selection</string>
+    <string name="ollama_url">Ollama Server URL</string>
+    <string name="temperature">Temperature</string>
+    <string name="max_tokens">Max Tokens</string>
+    <string name="context_window">Context Window</string>
+    
+    <!-- Prompts -->
+    <string name="system_prompt">System Prompt</string>
+    <string name="agent_prompt">Agent Prompt</string>
+    <string name="personality_prompt">Personality Prompt</string>
+    <string name="functions_scope">Functions &amp; Scope</string>
+    <string name="edit_prompt">Edit Prompt</string>
+    <string name="reset_prompt">Reset to Default</string>
+    
+    <!-- Permissions -->
+    <string name="permission_required">Permission Required</string>
+    <string name="enable_accessibility">Enable Accessibility Service</string>
+    <string name="enable_notification">Enable Notification Access</string>
+    
+    <!-- Auto-Approval -->
+    <string name="auto_approval">Auto-Approval</string>
+    <string name="full_auto">Full Auto</string>
+    <string name="smart_auto">Smart Auto</string>
+    <string name="manual">Manual Approval</string>
+    
+    <!-- Status Messages -->
+    <string name="connecting">Connecting...</string>
+    <string name="processing">Processing...</string>
+    <string name="ready">Ready</string>
+    <string name="error">Error</string>
+    <string name="thinking">Thinking...</string>
+    
+    <!-- Accessibility Service -->
+    <string name="accessibility_service_description">Appolo needs accessibility access to automate app interactions and perform device tasks.</string>
+    
+    <!-- Notification Channel -->
+    <string name="notification_channel_name">Appolo Assistant</string>
+    <string name="notification_channel_description">Notifications from Appolo Pocket AI Assistant</string>
+    <string name="llm_channel_name">LLM Service</string>
+    <string name="llm_channel_description">Running local LLM inference</string>
+</resources>

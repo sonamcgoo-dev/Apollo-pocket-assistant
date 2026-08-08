@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Colors - Neon Magenta -->
+    <color name="neon_magenta">#FF00FF</color>
+    <color name="neon_magenta_dark">#CC00CC</color>
+    <color name="neon_magenta_light">#FF66FF</color>
+    
+    <!-- Secondary Colors - Electric Cyan -->
+    <color name="electric_cyan">#00FFFF</color>
+    <color name="electric_cyan_dark">#00CCCC</color>
+    <color name="electric_cyan_light">#66FFFF</color>
+    
+    <!-- Tertiary - Vaporwave Purple -->
+    <color name="vaporwave_purple">#8B5CF6</color>
+    <color name="vaporwave_purple_dark">#6D28D9</color>
+    <color name="vaporwave_purple_light">#A78BFA</color>
+    
+    <!-- Background Colors -->
+    <color name="deep_night">#0D0221</color>
+    <color name="soft_lavender">#1A0A2E</color>
+    <color name="glassy_purple">#2D1B4E</color>
+    <color name="surface_elevated">#3D2B5E</color>
+    
+    <!-- Glass Surface -->
+    <color name="glass_surface">#2D1B4E</color>
+    
+    <!-- Text Colors -->
+    <color name="text_primary">#F0E6FF</color>
+    <color name="text_secondary">#A78BFA</color>
+    <color name="text_tertiary">#6B5B7E</color>
+    
+    <!-- Status Colors -->
+    <color name="neon_green">#39FF14</color>
+    <color name="hot_pink">#FF1493</color>
+    <color name="golden_bronze">#CD7F32</color>
+    <color name="sunset_orange">#FF6B35</color>
+    
+    <!-- Gradients -->
+    <color name="gradient_start">#FF00FF</color>
+    <color name="gradient_center">#8B5CF6</color>
+    <color name="gradient_end">#00FFFF</color>
+    
+    <!-- Transparency -->
+    <color name="overlay_dark">#80000000</color>
+    <color name="overlay_light">#40FFFFFF</color>
+    <color name="glass_background">#401A0A2E</color>
+    
+    <!-- Theme Colors (Material 3) -->
+    <color name="primary">#FF00FF</color>
+    <color name="on_primary">#0D0221</color>
+    <color name="primary_container">#8B5CF6</color>
+    <color name="on_primary_container">#F0E6FF</color>
+    
+    <color name="secondary">#00FFFF</color>
+    <color name="on_secondary">#0D0221</color>
+    <color name="secondary_container">#2D1B4E</color>
+    <color name="on_secondary_container">#F0E6FF</color>
+    
+    <color name="tertiary">#A78BFA</color>
+    <color name="on_tertiary">#0D0221</color>
+    <color name="tertiary_container">#2D1B4E</color>
+    <color name="on_tertiary_container">#F0E6FF</color>
+    
+    <color name="error">#FF1493</color>
+    <color name="on_error">#F0E6FF</color>
+    <color name="error_container">#8B0000</color>
+    <color name="on_error_container">#F0E6FF</color>
+    
+    <color name="background">#0D0221</color>
+    <color name="on_background">#F0E6FF</color>
+    
+    <color name="surface">#1A0A2E</color>
+    <color name="on_surface">#F0E6FF</color>
+    <color name="surface_variant">#2D1B4E</color>
+    <color name="on_surface_variant">#A78BFA</color>
+    
+    <color name="outline">#FF00FF</color>
+    <color name="outline_variant">#2D1B4E</color>
+    <color name="inverse_surface">#F0E6FF</color>
+    <color name="inverse_on_surface">#0D0221</color>
+    <color name="inverse_primary">#8B5CF6</color>
+</resources>

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0D0221"/>
+      <stop offset="50%" style="stop-color:#1A0A2E"/>
+      <stop offset="100%" style="stop-color:#2D1B4E"/>
+    </linearGradient>
+    <linearGradient id="neonGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#FF00FF"/>
+      <stop offset="50%" style="stop-color:#8B5CF6"/>
+      <stop offset="100%" style="stop-color:#00FFFF"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="neonGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="512" height="512" rx="80" fill="url(#bgGrad)"/>
+  
+  <!-- Decorative grid lines (vaporwave style) -->
+  <g stroke="#FF00FF" stroke-width="0.5" opacity="0.2">
+    <line x1="0" y1="400" x2="512" y2="400"/>
+    <line x1="0" y1="420" x2="512" y2="420"/>
+    <line x1="0" y1="440" x2="512" y2="440"/>
+    <line x1="0" y1="460" x2="512" y2="460"/>
+    <line x1="0" y1="480" x2="512" y2="480"/>
+  </g>
+  
+  <!-- Sun -->
+  <circle cx="256" cy="200" r="80" fill="#FF00FF" filter="url(#neonGlow)" opacity="0.3"/>
+  <circle cx="256" cy="200" r="60" fill="none" stroke="url(#neonGrad)" stroke-width="4"/>
+  
+  <!-- Sun stripes -->
+  <g clip-path="url(#sunClip)">
+    <rect x="196" y="170" width="120" height="4" fill="#0D0221" opacity="0.8"/>
+    <rect x="196" y="185" width="120" height="6" fill="#0D0221" opacity="0.8"/>
+    <rect x="196" y="200" width="120" height="8" fill="#0D0221" opacity="0.8"/>
+    <rect x="196" y="218" width="120" height="10" fill="#0D0221" opacity="0.8"/>
+    <rect x="196" y="238" width="120" height="12" fill="#0D0221" opacity="0.8"/>
+  </g>
+  
+  <!-- Apollo Bust Outline -->
+  <g transform="translate(256, 320)" fill="none" stroke="url(#neonGrad)" stroke-width="3" filter="url(#glow)">
+    <!-- Head -->
+    <ellipse cx="0" cy="-40" rx="50" ry="60"/>
+    
+    <!-- Crown/Rays -->
+    <path d="M-30,-90 L-25,-110 L-15,-95 L0,-115 L15,-95 L25,-110 L30,-90"/>
+    <path d="M-35,-75 L-45,-85 L-30,-75"/>
+    <path d="M35,-75 L45,-85 L30,-75"/>
+    
+    <!-- Face details -->
+    <path d="M-20,-55 Q-15,-50 -10,-55"/>
+    <path d="M10,-55 Q15,-50 20,-55"/>
+    <ellipse cx="-15" cy="-52" rx="5" ry="3" fill="#FF00FF"/>
+    <ellipse cx="15" cy="-52" rx="5" ry="3" fill="#FF00FF"/>
+    <path d="M-10,-35 Q0,-30 10,-35"/>
+    
+    <!-- Neck and shoulders hint -->
+    <path d="M-20,-5 L-25,30 L-50,50"/>
+    <path d="M20,-5 L25,30 L50,50"/>
+    <path d="M-50,50 Q0,60 50,50"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="256" y="470" text-anchor="middle" fill="#00FFFF" font-family="monospace" font-size="24" filter="url(#glow)">APPOLO POCKET</text>
+  
+  <!-- Corner decorations -->
+  <g fill="#FF00FF" opacity="0.5">
+    <polygon points="20,20 40,20 20,40"/>
+    <polygon points="492,20 472,20 492,40"/>
+    <polygon points="20,492 40,492 20,472"/>
+    <polygon points="492,492 472,492 492,472"/>
+  </g>
+</svg>

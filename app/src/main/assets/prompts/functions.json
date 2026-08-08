@@ -1,0 +1,291 @@
+{
+  "capabilities": [
+    {
+      "name": "filesystem_read",
+      "description": "Read files from the device filesystem",
+      "requires_permission": true,
+      "scope": ["internal_storage", "external_storage", "app_data"]
+    },
+    {
+      "name": "filesystem_write",
+      "description": "Write files to the device filesystem",
+      "requires_permission": true,
+      "scope": ["app_data", "documents", "downloads"]
+    },
+    {
+      "name": "app_launch",
+      "description": "Launch installed applications",
+      "requires_permission": false,
+      "scope": ["all_installed_apps"]
+    },
+    {
+      "name": "app_automation",
+      "description": "Interact with apps via accessibility",
+      "requires_permission": true,
+      "accessibility_required": true,
+      "scope": ["ui_interaction", "text_input", "scrolling"]
+    },
+    {
+      "name": "system_settings_read",
+      "description": "Read system settings and preferences",
+      "requires_permission": true,
+      "scope": ["wifi", "bluetooth", "brightness", "volume"]
+    },
+    {
+      "name": "system_settings_write",
+      "description": "Modify system settings",
+      "requires_permission": true,
+      "scope": ["volume", "brightness"],
+      "requires_confirmation": true
+    },
+    {
+      "name": "notification_read",
+      "description": "Read notifications from apps",
+      "requires_permission": true,
+      "notification_listener_required": true,
+      "scope": ["notification_content", "notification_metadata"]
+    },
+    {
+      "name": "notification_clear",
+      "description": "Clear notifications",
+      "requires_permission": true,
+      "scope": ["specific_app", "all"],
+      "requires_confirmation": true
+    },
+    {
+      "name": "sms_read",
+      "description": "Read SMS messages",
+      "requires_permission": true,
+      "scope": ["recent_messages", "specific_thread"]
+    },
+    {
+      "name": "sms_send",
+      "description": "Send SMS messages",
+      "requires_permission": true,
+      "requires_confirmation": true,
+      "scope": ["to_specified_number"]
+    },
+    {
+      "name": "email_compose",
+      "description": "Create email drafts",
+      "requires_permission": false,
+      "method": "intent",
+      "scope": ["draft_creation"]
+    },
+    {
+      "name": "code_execute",
+      "description": "Execute code and scripts",
+      "requires_permission": false,
+      "scope": ["python", "shell", "javascript"],
+      "sandboxed": true
+    },
+    {
+      "name": "root_execute",
+      "description": "Execute commands with root privileges",
+      "requires_permission": true,
+      "root_required": true,
+      "requires_confirmation": true,
+      "scope": ["system_commands", "kernel_access"]
+    },
+    {
+      "name": "web_search",
+      "description": "Search the web",
+      "requires_permission": false,
+      "scope": ["general_search", "news", "images"]
+    },
+    {
+      "name": "web_scrape",
+      "description": "Extract content from web pages",
+      "requires_permission": false,
+      "scope": ["html_extraction", "api_calls"],
+      "rate_limited": true
+    },
+    {
+      "name": "memory_store",
+      "description": "Store information in long-term memory",
+      "requires_permission": false,
+      "scope": ["facts", "preferences", "context"]
+    },
+    {
+      "name": "memory_recall",
+      "description": "Retrieve information from memory",
+      "requires_permission": false,
+      "scope": ["all_memories", "category_filtered"]
+    }
+  ],
+  "permissions": {
+    "auto_granted": [
+      "filesystem_read",
+      "app_launch",
+      "notification_read",
+      "code_execute",
+      "web_search",
+      "web_scrape",
+      "memory_store",
+      "memory_recall"
+    ],
+    "requires_explicit": [
+      "filesystem_write",
+      "app_automation",
+      "system_settings_write",
+      "notification_clear",
+      "sms_read",
+      "sms_send",
+      "root_execute"
+    ]
+  },
+  "auto_approve_rules": [
+    {
+      "pattern": "read file *",
+      "action": "filesystem_read",
+      "enabled": true
+    },
+    {
+      "pattern": "open * app",
+      "action": "app_launch",
+      "enabled": true
+    },
+    {
+      "pattern": "show me notifications",
+      "action": "notification_read",
+      "enabled": true
+    },
+    {
+      "pattern": "search for *",
+      "action": "web_search",
+      "enabled": true
+    },
+    {
+      "pattern": "run * code",
+      "action": "code_execute",
+      "enabled": true
+    },
+    {
+      "pattern": "remember *",
+      "action": "memory_store",
+      "enabled": true
+    },
+    {
+      "pattern": "delete file *",
+      "action": "filesystem_write",
+      "enabled": false
+    },
+    {
+      "pattern": "send sms *",
+      "action": "sms_send",
+      "enabled": false
+    },
+    {
+      "pattern": "root *",
+      "action": "root_execute",
+      "enabled": false
+    }
+  ],
+  "mcp_tools": [
+    {
+      "name": "read_file",
+      "description": "Read the contents of a file from the filesystem",
+      "input_schema": {
+        "path": "string",
+        "max_lines": "number (optional)"
+      }
+    },
+    {
+      "name": "write_file",
+      "description": "Write content to a file",
+      "input_schema": {
+        "path": "string",
+        "content": "string",
+        "append": "boolean (optional)"
+      }
+    },
+    {
+      "name": "list_directory",
+      "description": "List contents of a directory",
+      "input_schema": {
+        "path": "string",
+        "include_hidden": "boolean (optional)"
+      }
+    },
+    {
+      "name": "run_command",
+      "description": "Execute a shell command",
+      "input_schema": {
+        "command": "string",
+        "timeout": "number (optional)",
+        "working_dir": "string (optional)"
+      }
+    },
+    {
+      "name": "launch_app",
+      "description": "Launch an application by package name",
+      "input_schema": {
+        "package_name": "string"
+      }
+    },
+    {
+      "name": "get_notifications",
+      "description": "Get recent notifications",
+      "input_schema": {
+        "limit": "number (optional)",
+        "package_filter": "string (optional)"
+      }
+    },
+    {
+      "name": "send_sms",
+      "description": "Send an SMS message",
+      "input_schema": {
+        "phone_number": "string",
+        "message": "string"
+      }
+    },
+    {
+      "name": "get_setting",
+      "description": "Get a system setting value",
+      "input_schema": {
+        "setting_name": "string"
+      }
+    },
+    {
+      "name": "set_setting",
+      "description": "Set a system setting value",
+      "input_schema": {
+        "setting_name": "string",
+        "value": "string"
+      }
+    },
+    {
+      "name": "search_web",
+      "description": "Search the web",
+      "input_schema": {
+        "query": "string",
+        "num_results": "number (optional)"
+      }
+    },
+    {
+      "name": "scrape_web",
+      "description": "Extract content from a URL",
+      "input_schema": {
+        "url": "string",
+        "selectors": "string (optional)"
+      }
+    },
+    {
+      "name": "store_memory",
+      "description": "Store information in memory",
+      "input_schema": {
+        "key": "string",
+        "value": "string",
+        "category": "string (optional)"
+      }
+    },
+    {
+      "name": "recall_memory",
+      "description": "Recall stored information",
+      "input_schema": {
+        "key": "string",
+        "category": "string (optional)"
+      }
+    }
+  ]
+}
