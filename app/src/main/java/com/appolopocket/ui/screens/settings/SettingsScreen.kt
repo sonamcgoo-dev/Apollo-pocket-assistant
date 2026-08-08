@@ -335,27 +335,35 @@ private fun LLMSettingsSection(
 
         HorizontalDivider(color = VaporwaveColors.GlassyPurple)
 
-        Text(
-            text = "Inference Server URL (Ollama)",
-            style = MaterialTheme.typography.bodyMedium,
-            color = VaporwaveColors.TextPrimary
-        )
-        AppoloTextField(
-            value = baseUrlDraft,
-            onValueChange = { baseUrlDraft = it },
-            placeholder = "http://localhost:11434",
-            singleLine = true,
-            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                keyboardType = KeyboardType.Uri
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
-        ) {
-            TextButton(onClick = { onBaseUrlChange(baseUrlDraft.trim()) }) {
-                Text("Apply", color = VaporwaveColors.ElectricCyan)
+        if (config.modelSource == ModelSource.OLLAMA) {
+            Text(
+                text = "Inference Server URL (Ollama)",
+                style = MaterialTheme.typography.bodyMedium,
+                color = VaporwaveColors.TextPrimary
+            )
+            AppoloTextField(
+                value = baseUrlDraft,
+                onValueChange = { baseUrlDraft = it },
+                placeholder = "http://localhost:11434",
+                singleLine = true,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = KeyboardType.Uri
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(onClick = { onBaseUrlChange(baseUrlDraft.trim()) }) {
+                    Text("Apply", color = VaporwaveColors.ElectricCyan)
+                }
+            }
+        } else {
+            Text(
+                text = "Remote catalog mode uses built-in model links for ${config.modelSource.name.replace("_", " ")}.",
+                style = MaterialTheme.typography.bodySmall,
+                color = VaporwaveColors.TextSecondary
             }
         }
 

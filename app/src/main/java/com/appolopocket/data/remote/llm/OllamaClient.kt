@@ -369,75 +369,80 @@ class OllamaClient @Inject constructor(
             .takeIf { it.isNotBlank() } ?: "bin"
         val destination = File(modelsDir, "$safeName.$extension")
 
-        val request = Request.Builder().url(downloadUrl).get().build()
-        val response = client.newCall(request).execute()
-        if (!response.isSuccessful) {
-            collector.emit(ModelPullProgress.Error("HTTP ${response.code}: ${response.message}"))
-            return
-        }
+        try {
+            val request = Request.Builder().url(downloadUrl).get().build()
+            val response = client.newCall(request).execute()
+            if (!response.isSuccessful) {
+                collector.emit(ModelPullProgress.Error("HTTP ${response.code}: ${response.message}"))
+                return
+            }
 
-        val body = response.body
-        if (body == null) {
-            collector.emit(ModelPullProgress.Error("Empty response body"))
-            return
-        }
+            val body = response.body
+            if (body == null) {
+                collector.emit(ModelPullProgress.Error("Empty response body"))
+                return
+            }
 
-        val totalBytes = body.contentLength().takeIf { it > 0 } ?: 0L
-        collector.emit(
-            ModelPullProgress.Update(
-                status = "Downloading",
-                digest = selectedModel.digest,
-                total = totalBytes,
-                completed = 0
+            val totalBytes = body.contentLength().takeIf { it > 0 } ?: 0L
+            collector.emit(
+                ModelPullProgress.Update(
+                    status = "Downloading",
+                    digest = selectedModel.digest,
+                    total = totalBytes,
+                    completed = 0
+                )
             )
-        )
 
-        body.byteStream().use { input ->
-            FileOutputStream(destination).use { output ->
-                val buffer = ByteArray(256 * 1024)
-                var downloaded = 0L
-                var lastEmitted = 0L
-                while (true) {
-                    val read = input.read(buffer)
-                    if (read == -1) break
-                    output.write(buffer, 0, read)
-                    downloaded += read
-                    val shouldEmit = (totalBytes > 0 && downloaded == totalBytes) ||
-                        downloaded - lastEmitted >= (4 * 1024 * 1024)
-                    if (shouldEmit) {
+            body.byteStream().use { input ->
+                FileOutputStream(destination).use { output ->
+                    val buffer = ByteArray(256 * 1024)
+                    var downloaded = 0L
+                    var lastEmitted = 0L
+                    while (true) {
+                        val read = input.read(buffer)
+                        if (read == -1) break
+                        output.write(buffer, 0, read)
+                        downloaded += read
+                        val shouldEmit = (totalBytes > 0 && downloaded == totalBytes) ||
+                            downloaded - lastEmitted >= (4 * 1024 * 1024)
+                        if (shouldEmit) {
+                            collector.emit(
+                                ModelPullProgress.Update(
+                                    status = "Downloading",
+                                    digest = selectedModel.digest,
+                                    total = totalBytes,
+                                    completed = downloaded
+                                )
+                            )
+                            lastEmitted = downloaded
+                        }
+                    }
+
+                    if (totalBytes > 0 && downloaded < totalBytes) {
+                        destination.delete()
                         collector.emit(
-                            ModelPullProgress.Update(
-                                status = "Downloading",
-                                digest = selectedModel.digest,
-                                total = totalBytes,
-                                completed = downloaded
+                            ModelPullProgress.Error(
+                                "Download incomplete: $downloaded/$totalBytes bytes received"
                             )
                         )
-                        lastEmitted = downloaded
+                        return
                     }
                 }
-
-                if (totalBytes > 0 && downloaded < totalBytes) {
-                    destination.delete()
-                    collector.emit(
-                        ModelPullProgress.Error(
-                            "Download incomplete: $downloaded/$totalBytes bytes received"
-                        )
-                    )
-                    return@downloadRemoteModel
-                }
             }
-        }
 
-        collector.emit(
-            ModelPullProgress.Update(
-                status = "Saved to ${destination.absolutePath}",
-                digest = selectedModel.digest,
-                total = totalBytes,
-                completed = destination.length()
+            collector.emit(
+                ModelPullProgress.Update(
+                    status = "Model saved successfully",
+                    digest = selectedModel.digest,
+                    total = totalBytes,
+                    completed = destination.length()
+                )
             )
-        )
-        collector.emit(ModelPullProgress.Complete)
+            collector.emit(ModelPullProgress.Complete)
+        } catch (e: Exception) {
+            destination.delete()
+            collector.emit(ModelPullProgress.Error(e.message ?: "Model download failed"))
+        }
     }
 
     private suspend fun checkOllamaConnection(): Boolean {
