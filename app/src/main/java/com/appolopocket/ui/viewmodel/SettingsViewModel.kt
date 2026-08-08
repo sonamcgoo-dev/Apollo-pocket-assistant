@@ -3,7 +3,8 @@ package com.appolopocket.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.appolopocket.data.remote.llm.OllamaModel
-import com.appolopocket.domain.model.*import com.appolopocket.domain.repository.LLMRepository
+import com.appolopocket.domain.model.*
+import com.appolopocket.domain.repository.LLMRepository
 import com.appolopocket.domain.repository.PreferencesRepository
 import com.appolopocket.domain.usecase.GetAvailableModelsUseCase
 import com.appolopocket.domain.usecase.PullModelUseCase

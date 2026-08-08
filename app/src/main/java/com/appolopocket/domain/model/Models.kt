@@ -218,7 +218,7 @@ data class PrivacySettings(
 )
 
 /**
- * Notification behaviour settings
+ * Notification behavior settings
  */
 @Serializable
 data class NotificationSettings(

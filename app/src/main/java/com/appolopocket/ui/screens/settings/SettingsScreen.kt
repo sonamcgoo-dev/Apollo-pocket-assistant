@@ -414,7 +414,14 @@ private fun LLMSettingsSection(
             }
         } else {
             Text(
-                text = "Remote catalog mode uses built-in model links for ${config.modelSource.name.replace("_", " ")}.",
+                text = "Remote catalog mode uses built-in model links for ${
+                    when (config.modelSource) {
+                        ModelSource.HUGGING_FACE -> "Hugging Face"
+                        ModelSource.GITHUB -> "GitHub"
+                        ModelSource.FDROID -> "F-Droid"
+                        else -> config.modelSource.name
+                    }
+                }.",
                 style = MaterialTheme.typography.bodySmall,
                 color = VaporwaveColors.TextSecondary
             )

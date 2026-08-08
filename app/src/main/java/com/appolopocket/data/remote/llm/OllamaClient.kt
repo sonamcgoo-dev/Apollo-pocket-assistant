@@ -265,6 +265,7 @@ class OllamaClient @Inject constructor(
             ModelSource.OLLAMA -> listOllamaModels()
             ModelSource.HUGGING_FACE -> Result.success(RemoteModelCatalogs.huggingFace)
             ModelSource.GITHUB -> Result.success(RemoteModelCatalogs.github)
+            ModelSource.FDROID -> Result.success(RemoteModelCatalogs.fdroid)
         }
     }
     
@@ -273,6 +274,7 @@ class OllamaClient @Inject constructor(
             ModelSource.OLLAMA -> emitAllOllamaPullProgress(modelName, this)
             ModelSource.HUGGING_FACE -> downloadRemoteModel(modelName, RemoteModelCatalogs.huggingFace, this)
             ModelSource.GITHUB -> downloadRemoteModel(modelName, RemoteModelCatalogs.github, this)
+            ModelSource.FDROID -> downloadRemoteModel(modelName, RemoteModelCatalogs.fdroid, this)
         }
     }.flowOn(Dispatchers.IO)
     
@@ -671,6 +673,36 @@ private object RemoteModelCatalogs {
             source = ModelSource.GITHUB,
             downloadUrl = "https://github.com/Mozilla-Ocho/llamafile/releases/download/0.8.17/Llama-3.2-3B-Instruct.Q6_K.llamafile",
             description = "Higher quality assistant model for capable Android hardware."
+        )
+    )
+
+    val fdroid = listOf(
+        OllamaModel(
+            name = "TinyLlama-1.1B-Chat (Q4_K_M) — FOSS",
+            model = "tinyllama-1.1b-chat-q4_k_m-foss",
+            size = 668_000_000L,
+            digest = "fd-tinyllama-1.1b-q4",
+            source = ModelSource.FDROID,
+            downloadUrl = "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
+            description = "Permissively licensed (Apache 2.0) compact chat model. Compatible with F-Droid FOSS distribution."
+        ),
+        OllamaModel(
+            name = "Mistral-7B-Instruct-v0.1 (Q2_K) — FOSS",
+            model = "mistral-7b-instruct-v0.1-q2_k-foss",
+            size = 2_870_000_000L,
+            digest = "fd-mistral-7b-q2",
+            source = ModelSource.FDROID,
+            downloadUrl = "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q2_K.gguf",
+            description = "Apache 2.0 licensed instruction model. Suitable for devices with ≥4 GB RAM. F-Droid compatible."
+        ),
+        OllamaModel(
+            name = "OLMo-1B-Instruct (Q4_K_M) — FOSS",
+            model = "olmo-1b-instruct-q4_k_m-foss",
+            size = 630_000_000L,
+            digest = "fd-olmo-1b-q4",
+            source = ModelSource.FDROID,
+            downloadUrl = "https://huggingface.co/allenai/OLMo-1B-hf/resolve/main/model.safetensors",
+            description = "Fully open model (Apache 2.0) from Allen AI. Lightweight and FOSS-first. F-Droid compatible."
         )
     )
 }
