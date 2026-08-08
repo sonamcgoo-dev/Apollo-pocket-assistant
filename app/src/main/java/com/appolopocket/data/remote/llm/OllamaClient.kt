@@ -8,6 +8,7 @@ import com.appolopocket.domain.model.MessageRole
 import com.appolopocket.domain.model.ModelSource
 import com.appolopocket.domain.model.ToolCall
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flow
@@ -275,8 +276,8 @@ class OllamaClient @Inject constructor(
         return checkOllamaConnection()
     }
 
-    private fun listOllamaModels(): Result<List<OllamaModel>> {
-        return try {
+    private suspend fun listOllamaModels(): Result<List<OllamaModel>> = withContext(Dispatchers.IO) {
+        try {
             val request = Request.Builder()
                 .url("${config.baseUrl}/api/tags")
                 .get()
@@ -389,21 +390,35 @@ class OllamaClient @Inject constructor(
 
         body.byteStream().use { input ->
             FileOutputStream(destination).use { output ->
-                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                val buffer = ByteArray(256 * 1024)
                 var downloaded = 0L
+                var lastEmitted = 0L
                 while (true) {
                     val read = input.read(buffer)
                     if (read == -1) break
                     output.write(buffer, 0, read)
                     downloaded += read
+                    val shouldEmit = downloaded == totalBytes || downloaded - lastEmitted >= (4 * 1024 * 1024)
+                    if (shouldEmit) {
+                        collector.emit(
+                            ModelPullProgress.Update(
+                                status = "Downloading",
+                                digest = selectedModel.digest,
+                                total = totalBytes,
+                                completed = downloaded
+                            )
+                        )
+                        lastEmitted = downloaded
+                    }
+                }
+
+                if (totalBytes > 0 && downloaded < totalBytes) {
                     collector.emit(
-                        ModelPullProgress.Update(
-                            status = "Downloading",
-                            digest = selectedModel.digest,
-                            total = totalBytes,
-                            completed = downloaded
+                        ModelPullProgress.Error(
+                            "Download incomplete: $downloaded/$totalBytes bytes received"
                         )
                     )
+                    return
                 }
             }
         }
@@ -413,7 +428,7 @@ class OllamaClient @Inject constructor(
                 status = "Saved to ${destination.absolutePath}",
                 digest = selectedModel.digest,
                 total = totalBytes,
-                completed = totalBytes
+                completed = destination.length()
             )
         )
         collector.emit(ModelPullProgress.Complete)

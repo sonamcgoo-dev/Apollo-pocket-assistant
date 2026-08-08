@@ -77,7 +77,7 @@ class SettingsViewModel @Inject constructor(
                     }
                 )
             }
-            if (isConnected || source != ModelSource.OLLAMA) {
+            if (isConnected) {
                 loadAvailableModels()
             }
         }
