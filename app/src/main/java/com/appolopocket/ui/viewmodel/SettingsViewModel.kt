@@ -62,7 +62,12 @@ class SettingsViewModel @Inject constructor(
     fun checkConnection() {
         viewModelScope.launch {
             _uiState.update { it.copy(connectionStatus = ConnectionStatus.CONNECTING) }
-            val isConnected = llmRepository.checkConnection()
+            val source = _uiState.value.userPreferences.llmConfig.modelSource
+            val isConnected = if (source == ModelSource.OLLAMA) {
+                llmRepository.checkConnection()
+            } else {
+                true
+            }
             _uiState.update {
                 it.copy(
                     connectionStatus = if (isConnected) {
@@ -72,7 +77,7 @@ class SettingsViewModel @Inject constructor(
                     }
                 )
             }
-            if (isConnected) {
+            if (isConnected || source != ModelSource.OLLAMA) {
                 loadAvailableModels()
             }
         }
@@ -115,9 +120,14 @@ class SettingsViewModel @Inject constructor(
         updateLLMConfig(currentConfig.copy(modelName = modelName))
     }
 
-    fun updateOllamaUrl(url: String) {
+    fun updateBaseUrl(url: String) {
         val currentConfig = _uiState.value.userPreferences.llmConfig
         updateLLMConfig(currentConfig.copy(baseUrl = url))
+    }
+
+    fun updateModelSource(source: ModelSource) {
+        val currentConfig = _uiState.value.userPreferences.llmConfig
+        updateLLMConfig(currentConfig.copy(modelSource = source))
     }
 
     fun updateTemperature(temperature: Float) {

@@ -30,6 +30,7 @@ class PreferencesManager @Inject constructor(
         // LLM Config
         val MODEL_NAME = stringPreferencesKey("llm_model_name")
         val OLLAMA_URL = stringPreferencesKey("ollama_url")
+        val MODEL_SOURCE = stringPreferencesKey("llm_model_source")
         val TEMPERATURE = floatPreferencesKey("llm_temperature")
         val MAX_TOKENS = intPreferencesKey("llm_max_tokens")
         val CONTEXT_WINDOW = intPreferencesKey("llm_context_window")
@@ -77,6 +78,9 @@ class PreferencesManager @Inject constructor(
                 llmConfig = LLMConfig(
                     modelName = preferences[PreferencesKeys.MODEL_NAME] ?: "llama2",
                     baseUrl = preferences[PreferencesKeys.OLLAMA_URL] ?: "http://localhost:11434",
+                    modelSource = preferences[PreferencesKeys.MODEL_SOURCE]?.let {
+                        runCatching { ModelSource.valueOf(it) }.getOrDefault(ModelSource.OLLAMA)
+                    } ?: ModelSource.OLLAMA,
                     temperature = preferences[PreferencesKeys.TEMPERATURE] ?: 0.7f,
                     maxTokens = preferences[PreferencesKeys.MAX_TOKENS] ?: 4096,
                     contextWindow = preferences[PreferencesKeys.CONTEXT_WINDOW] ?: 4096
@@ -121,6 +125,7 @@ class PreferencesManager @Inject constructor(
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.MODEL_NAME] = config.modelName
             preferences[PreferencesKeys.OLLAMA_URL] = config.baseUrl
+            preferences[PreferencesKeys.MODEL_SOURCE] = config.modelSource.name
             preferences[PreferencesKeys.TEMPERATURE] = config.temperature
             preferences[PreferencesKeys.MAX_TOKENS] = config.maxTokens
             preferences[PreferencesKeys.CONTEXT_WINDOW] = config.contextWindow

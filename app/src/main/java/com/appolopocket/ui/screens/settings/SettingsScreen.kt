@@ -17,6 +17,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.appolopocket.data.remote.llm.OllamaModel
 import com.appolopocket.domain.model.ApprovalMode
 import com.appolopocket.domain.model.AppTheme
+import com.appolopocket.domain.model.ModelSource
 import com.appolopocket.ui.components.*
 import com.appolopocket.ui.theme.VaporwaveColors
 import com.appolopocket.ui.viewmodel.PromptType
@@ -58,6 +59,7 @@ fun SettingsScreen(
                 item {
                     ConnectionSection(
                         status = uiState.connectionStatus,
+                        modelSource = uiState.userPreferences.llmConfig.modelSource,
                         onRefresh = { viewModel.checkConnection() }
                     )
                 }
@@ -68,8 +70,11 @@ fun SettingsScreen(
                         config = uiState.userPreferences.llmConfig,
                         availableModels = uiState.availableModels,
                         isLoadingModels = uiState.isLoadingModels,
+                        isPullingModel = uiState.isPullingModel,
+                        pullProgress = uiState.pullProgress,
                         onModelSelect = { showModelSelector = true },
-                        onOllamaUrlChange = { viewModel.updateOllamaUrl(it) },
+                        onModelSourceChange = { viewModel.updateModelSource(it) },
+                        onBaseUrlChange = { viewModel.updateBaseUrl(it) },
                         onTemperatureChange = { viewModel.updateTemperature(it) },
                         onMaxTokensChange = { viewModel.updateMaxTokens(it) },
                         onPullModel = { viewModel.pullModel(it) }
@@ -167,6 +172,21 @@ fun SettingsScreen(
                 }
             )
         }
+
+        uiState.error?.let { error ->
+            Snackbar(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp),
+                action = {
+                    TextButton(onClick = { viewModel.clearError() }) {
+                        Text("Dismiss", color = VaporwaveColors.NeonMagenta)
+                    }
+                },
+                containerColor = VaporwaveColors.GlassyPurple,
+                contentColor = VaporwaveColors.HotPink
+            ) { Text(error) }
+        }
     }
 }
 
@@ -198,11 +218,16 @@ private fun SettingsTopBar(onNavigateBack: () -> Unit) {
 @Composable
 private fun ConnectionSection(
     status: ConnectionStatus,
+    modelSource: ModelSource,
     onRefresh: () -> Unit
 ) {
     SettingsSection(title = "Connection") {
         SettingsRow(
-            label = "Ollama Server",
+            label = when (modelSource) {
+                ModelSource.OLLAMA -> "Ollama Server"
+                ModelSource.HUGGING_FACE -> "Hugging Face Catalog"
+                ModelSource.GITHUB -> "GitHub Catalog"
+            },
             trailing = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     StatusIndicator(status = status)
@@ -225,13 +250,50 @@ private fun LLMSettingsSection(
     config: com.appolopocket.domain.model.LLMConfig,
     availableModels: List<com.appolopocket.data.remote.llm.OllamaModel>,
     isLoadingModels: Boolean,
+    isPullingModel: Boolean,
+    pullProgress: String,
     onModelSelect: () -> Unit,
-    onOllamaUrlChange: (String) -> Unit,
+    onModelSourceChange: (ModelSource) -> Unit,
+    onBaseUrlChange: (String) -> Unit,
     onTemperatureChange: (Float) -> Unit,
     onMaxTokensChange: (Int) -> Unit,
     onPullModel: (String) -> Unit
 ) {
+    var baseUrlDraft by remember(config.baseUrl) { mutableStateOf(config.baseUrl) }
+
     SettingsSection(title = "LLM Settings") {
+        Text(
+            text = "Model Source",
+            style = MaterialTheme.typography.bodyMedium,
+            color = VaporwaveColors.TextPrimary
+        )
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+        ) {
+            ModelSource.entries.forEach { source ->
+                FilterChip(
+                    selected = config.modelSource == source,
+                    onClick = { onModelSourceChange(source) },
+                    label = { Text(source.name.replace("_", " ")) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = VaporwaveColors.NeonMagenta.copy(alpha = 0.2f),
+                        selectedLabelColor = VaporwaveColors.NeonMagenta
+                    )
+                )
+            }
+        }
+        Text(
+            text = "Source controls where models are downloaded from.",
+            style = MaterialTheme.typography.bodySmall,
+            color = VaporwaveColors.TextSecondary
+        )
+
+        HorizontalDivider(color = VaporwaveColors.GlassyPurple)
+
         // Model selection
         SettingsRow(
             label = "Model",
@@ -252,24 +314,53 @@ private fun LLMSettingsSection(
                 }
             }
         )
-        
+
+        if (config.modelName.isNotBlank()) {
+            AppoloButton(
+                text = if (isPullingModel) "Pulling..." else "Pull Selected Model",
+                onClick = { onPullModel(config.modelName) },
+                enabled = !isPullingModel,
+                isLoading = isPullingModel,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        if (pullProgress.isNotBlank()) {
+            Text(
+                text = pullProgress,
+                style = MaterialTheme.typography.bodySmall,
+                color = VaporwaveColors.TextSecondary
+            )
+        }
+
         HorizontalDivider(color = VaporwaveColors.GlassyPurple)
-        
-        // Ollama URL
-        SettingsRow(
-            label = "Server URL",
-            description = config.baseUrl,
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Cloud,
-                    contentDescription = null,
-                    tint = VaporwaveColors.VaporwavePurple
-                )
-            }
+
+        Text(
+            text = "Inference Server URL (Ollama)",
+            style = MaterialTheme.typography.bodyMedium,
+            color = VaporwaveColors.TextPrimary
         )
-        
+        AppoloTextField(
+            value = baseUrlDraft,
+            onValueChange = { baseUrlDraft = it },
+            placeholder = "http://localhost:11434",
+            singleLine = true,
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                keyboardType = KeyboardType.Uri
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            TextButton(onClick = { onBaseUrlChange(baseUrlDraft.trim()) }) {
+                Text("Apply", color = VaporwaveColors.ElectricCyan)
+            }
+        }
+
         HorizontalDivider(color = VaporwaveColors.GlassyPurple)
-        
+
         // Temperature slider
         SettingsRow(
             label = "Temperature",
@@ -547,7 +638,7 @@ private fun AboutSection() {
         )
         SettingsRow(
             label = "Built with",
-            description = "Kotlin, Jetpack Compose, Ollama"
+            description = "Kotlin, Jetpack Compose, Ollama, Hugging Face, GitHub"
         )
         SettingsRow(
             label = "License",
@@ -693,6 +784,13 @@ private fun ModelSelectorDialog(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = VaporwaveColors.TextSecondary
                             )
+                            model.description?.takeIf { it.isNotBlank() }?.let { description ->
+                                Text(
+                                    text = description,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = VaporwaveColors.TextTertiary
+                                )
+                            }
                         }
                     }
                 }

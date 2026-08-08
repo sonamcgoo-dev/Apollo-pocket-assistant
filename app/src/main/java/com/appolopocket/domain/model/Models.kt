@@ -57,11 +57,19 @@ data class ToolResult(
 data class LLMConfig(
     val modelName: String = "llama2",
     val baseUrl: String = "http://localhost:11434",
+    val modelSource: ModelSource = ModelSource.OLLAMA,
     val temperature: Float = 0.7f,
     val maxTokens: Int = 4096,
     val contextWindow: Int = 4096,
     val stream: Boolean = true
 )
+
+@Serializable
+enum class ModelSource {
+    OLLAMA,
+    HUGGING_FACE,
+    GITHUB
+}
 
 /**
  * Control prompts for AI behavior
