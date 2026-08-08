@@ -1,11 +1,16 @@
 package com.appolopocket.data.remote.llm
 
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.appolopocket.domain.model.LLMConfig
 import com.appolopocket.domain.model.Message
 import com.appolopocket.domain.model.MessageRole
+import com.appolopocket.domain.model.ModelSource
 import com.appolopocket.domain.model.ToolCall
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.serialization.Serializable
@@ -15,6 +20,8 @@ import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import okio.Buffer
+import java.io.File
+import java.io.FileOutputStream
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -81,7 +88,9 @@ data class OllamaProperty(
 )
 
 @Singleton
-class OllamaClient @Inject constructor() {
+class OllamaClient @Inject constructor(
+    @ApplicationContext private val appContext: Context
+) {
     private var config: LLMConfig = LLMConfig()
     private val json = Json {
         ignoreUnknownKeys = true
@@ -93,6 +102,10 @@ class OllamaClient @Inject constructor() {
         .connectTimeout(60, TimeUnit.SECONDS)
         .readTimeout(120, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
+        .build()
+
+    private val downloadClient = client.newBuilder()
+        .readTimeout(0, TimeUnit.SECONDS)
         .build()
     
     fun updateConfig(newConfig: LLMConfig) {
@@ -248,60 +261,79 @@ class OllamaClient @Inject constructor() {
     }.flowOn(Dispatchers.IO)
     
     suspend fun listModels(): Result<List<OllamaModel>> {
-        return try {
+        return when (config.modelSource) {
+            ModelSource.OLLAMA -> listOllamaModels()
+            ModelSource.HUGGING_FACE -> Result.success(RemoteModelCatalogs.huggingFace)
+            ModelSource.GITHUB -> Result.success(RemoteModelCatalogs.github)
+            ModelSource.FDROID -> Result.success(RemoteModelCatalogs.fdroid)
+        }
+    }
+    
+    suspend fun pullModel(modelName: String): Flow<ModelPullProgress> = flow {
+        when (config.modelSource) {
+            ModelSource.OLLAMA -> emitAllOllamaPullProgress(modelName, this)
+            ModelSource.HUGGING_FACE -> downloadRemoteModel(modelName, RemoteModelCatalogs.huggingFace, this)
+            ModelSource.GITHUB -> downloadRemoteModel(modelName, RemoteModelCatalogs.github, this)
+            ModelSource.FDROID -> downloadRemoteModel(modelName, RemoteModelCatalogs.fdroid, this)
+        }
+    }.flowOn(Dispatchers.IO)
+    
+    suspend fun checkConnection(): Boolean {
+        return checkOllamaConnection()
+    }
+
+    private suspend fun listOllamaModels(): Result<List<OllamaModel>> = withContext(Dispatchers.IO) {
+        try {
             val request = Request.Builder()
                 .url("${config.baseUrl}/api/tags")
                 .get()
                 .build()
-            
+
             val response = client.newCall(request).execute()
-            
             if (!response.isSuccessful) {
-                return Result.failure(Exception("HTTP ${response.code}: ${response.message}"))
+                return@withContext Result.failure(Exception("HTTP ${response.code}: ${response.message}"))
             }
-            
+
             val body = response.body?.string()
-            if (body == null) {
-                return Result.failure(Exception("Empty response body"))
-            }
-            
+                ?: return@withContext Result.failure(Exception("Empty response body"))
+
             val modelsResponse = json.decodeFromString<OllamaModelsResponse>(body)
             Result.success(modelsResponse.models)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
-    
-    suspend fun pullModel(modelName: String): Flow<ModelPullProgress> = flow {
-        val requestBody = "{\"name\": \"$modelName\"}"
-        
+
+    private suspend fun emitAllOllamaPullProgress(
+        modelName: String,
+        collector: FlowCollector<ModelPullProgress>
+    ) {
+        val requestBody = json.encodeToString(mapOf("name" to modelName))
         val request = Request.Builder()
             .url("${config.baseUrl}/api/pull")
             .post(requestBody.toRequestBody("application/json".toMediaType()))
             .build()
-        
+
         val response = client.newCall(request).execute()
-        
         if (!response.isSuccessful) {
-            emit(ModelPullProgress.Error("HTTP ${response.code}: ${response.message}"))
-            return@flow
+            collector.emit(ModelPullProgress.Error("HTTP ${response.code}: ${response.message}"))
+            return
         }
-        
+
         val body = response.body
         if (body == null) {
-            emit(ModelPullProgress.Error("Empty response body"))
-            return@flow
+            collector.emit(ModelPullProgress.Error("Empty response body"))
+            return
         }
-        
+
         val source = body.source()
-        
         while (!source.buffer.exhausted()) {
             val line = source.readUtf8Line() ?: continue
             if (line.isBlank()) continue
-            
+
             try {
                 val progress = json.decodeFromString<OllamaPullProgress>(line)
-                emit(
+                collector.emit(
                     ModelPullProgress.Update(
                         status = progress.status ?: "",
                         digest = progress.digest,
@@ -309,27 +341,172 @@ class OllamaClient @Inject constructor() {
                         completed = progress.completed
                     )
                 )
-                
+
                 if (progress.done == true) {
-                    emit(ModelPullProgress.Complete)
+                    collector.emit(ModelPullProgress.Complete)
                 }
             } catch (e: Exception) {
-                emit(ModelPullProgress.Error("Parse error: ${e.message}"))
+                collector.emit(ModelPullProgress.Error("Parse error: ${e.message}"))
             }
         }
-    }.flowOn(Dispatchers.IO)
-    
-    suspend fun checkConnection(): Boolean {
-        return try {
-            val request = Request.Builder()
-                .url("${config.baseUrl}/api/tags")
-                .get()
-                .build()
-            
-            val response = client.newCall(request).execute()
-            response.isSuccessful
+    }
+
+    private suspend fun downloadRemoteModel(
+        modelName: String,
+        catalog: List<OllamaModel>,
+        collector: FlowCollector<ModelPullProgress>
+    ) {
+        val selectedModel = catalog.firstOrNull { it.name == modelName || it.model == modelName }
+        val downloadUrl = selectedModel?.downloadUrl
+        if (downloadUrl.isNullOrBlank()) {
+            collector.emit(ModelPullProgress.Error("Model download URL not found for $modelName"))
+            return
+        }
+
+        val modelsDir = resolveModelsDir()
+        if (modelsDir == null) {
+            collector.emit(ModelPullProgress.Error("Failed to create model directory"))
+            return
+        }
+        val safeName = modelName.replace(Regex("[^A-Za-z0-9._-]"), "_")
+        val extension = downloadUrl
+            .substringBefore('?')
+            .substringAfterLast('.', "")
+            .takeIf { it.isNotBlank() } ?: "bin"
+        val destination = File(modelsDir, "$safeName.$extension")
+        val tempDestination = File(modelsDir, "$safeName.$extension.part")
+
+        try {
+            val request = Request.Builder().url(downloadUrl).get().build()
+            downloadClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    collector.emit(ModelPullProgress.Error("HTTP ${response.code}: ${response.message}"))
+                    return
+                }
+
+                val body = response.body
+                if (body == null) {
+                    collector.emit(ModelPullProgress.Error("Empty response body"))
+                    return
+                }
+
+                val totalBytes = body.contentLength().takeIf { it > 0 } ?: 0L
+                val usableSpace = modelsDir.usableSpace
+                if (totalBytes > 0 && usableSpace < totalBytes) {
+                    collector.emit(
+                        ModelPullProgress.Error(
+                            "Not enough free space to download model (${usableSpace}/${totalBytes} bytes available)"
+                        )
+                    )
+                    return
+                }
+
+                collector.emit(
+                    ModelPullProgress.Update(
+                        status = "Downloading",
+                        digest = selectedModel.digest,
+                        total = totalBytes,
+                        completed = 0
+                    )
+                )
+
+                var incompleteError: String? = null
+                if (tempDestination.exists()) {
+                    tempDestination.delete()
+                }
+                body.byteStream().use { input ->
+                    FileOutputStream(tempDestination).use { output ->
+                        val buffer = ByteArray(256 * 1024)
+                        var downloaded = 0L
+                        var lastEmitted = 0L
+                        while (true) {
+                            val read = input.read(buffer)
+                            if (read == -1) break
+                            output.write(buffer, 0, read)
+                            downloaded += read
+                            val shouldEmit = (totalBytes > 0 && downloaded == totalBytes) ||
+                                downloaded - lastEmitted >= (4 * 1024 * 1024)
+                            if (shouldEmit) {
+                                collector.emit(
+                                    ModelPullProgress.Update(
+                                        status = "Downloading",
+                                        digest = selectedModel.digest,
+                                        total = totalBytes,
+                                        completed = downloaded
+                                    )
+                                )
+                                lastEmitted = downloaded
+                            }
+                        }
+
+                        if (totalBytes > 0 && downloaded < totalBytes) {
+                            incompleteError = "Download incomplete: $downloaded/$totalBytes bytes received"
+                        }
+                    }
+                }
+
+                val errorMessage = incompleteError
+                if (errorMessage != null) {
+                    tempDestination.delete()
+                    collector.emit(ModelPullProgress.Error(errorMessage))
+                    return
+                }
+
+                if (destination.exists() && !destination.delete()) {
+                    tempDestination.delete()
+                    collector.emit(ModelPullProgress.Error("Failed to replace existing model file"))
+                    return
+                }
+
+                if (!tempDestination.renameTo(destination)) {
+                    tempDestination.delete()
+                    collector.emit(ModelPullProgress.Error("Failed to finalize model download"))
+                    return
+                }
+
+                collector.emit(
+                    ModelPullProgress.Update(
+                        status = "Model saved successfully",
+                        digest = selectedModel.digest,
+                        total = totalBytes,
+                        completed = destination.length()
+                    )
+                )
+                collector.emit(ModelPullProgress.Complete)
+            }
         } catch (e: Exception) {
-            false
+            tempDestination.delete()
+            collector.emit(ModelPullProgress.Error(e.message ?: "Model download failed"))
+        }
+    }
+
+    private fun resolveModelsDir(): File? {
+        val candidateDirectories = listOfNotNull(
+            appContext.getExternalFilesDir(null)?.let { File(it, "models") },
+            File(appContext.filesDir, "models")
+        )
+
+        return candidateDirectories.firstOrNull { it.exists() || it.mkdirs() }
+    }
+
+    private suspend fun checkOllamaConnection(): Boolean {
+        return checkUrl("${config.baseUrl}/api/tags")
+    }
+
+    private suspend fun checkUrl(url: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val request = Request.Builder()
+                    .url(url)
+                    .get()
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    response.isSuccessful
+                }
+            } catch (_: Exception) {
+                false
+            }
         }
     }
     
@@ -401,7 +578,10 @@ data class OllamaModel(
     val model: String,
     val size: Long,
     val digest: String,
-    val modifiedAt: String? = null
+    val modifiedAt: String? = null,
+    val source: ModelSource = ModelSource.OLLAMA,
+    val downloadUrl: String? = null,
+    val description: String? = null
 )
 
 @Serializable
@@ -443,3 +623,86 @@ private data class OllamaPullProgress(
     val completed: Long? = null,
     val done: Boolean? = null
 )
+
+private object RemoteModelCatalogs {
+    val huggingFace = listOf(
+        OllamaModel(
+            name = "Qwen2.5-1.5B-Instruct (Q4_K_M)",
+            model = "qwen2.5-1.5b-instruct-q4_k_m",
+            size = 1_100_000_000L,
+            digest = "hf-qwen2.5-1.5b",
+            source = ModelSource.HUGGING_FACE,
+            downloadUrl = "https://huggingface.co/bartowski/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-1.5B-Instruct-Q4_K_M.gguf",
+            description = "Fast instruction model suited for on-device assistants."
+        ),
+        OllamaModel(
+            name = "Llama-3.2-3B-Instruct (Q4_K_M)",
+            model = "llama-3.2-3b-instruct-q4_k_m",
+            size = 2_200_000_000L,
+            digest = "hf-llama3.2-3b",
+            source = ModelSource.HUGGING_FACE,
+            downloadUrl = "https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+            description = "Stronger reasoning and chat quality for capable phones."
+        ),
+        OllamaModel(
+            name = "Phi-3.5-mini-instruct (Q4_K_M)",
+            model = "phi-3.5-mini-instruct-q4_k_m",
+            size = 2_400_000_000L,
+            digest = "hf-phi3.5-mini",
+            source = ModelSource.HUGGING_FACE,
+            downloadUrl = "https://huggingface.co/bartowski/Phi-3.5-mini-instruct-GGUF/resolve/main/Phi-3.5-mini-instruct-Q4_K_M.gguf",
+            description = "Balanced model for coding and assistant-style responses."
+        )
+    )
+
+    val github = listOf(
+        OllamaModel(
+            name = "TinyLlama-1.1B-Chat (Q5_K_M)",
+            model = "tinyllama-1.1b-chat-q5_k_m",
+            size = 800_000_000L,
+            digest = "gh-tinyllama-1.1b-q5",
+            source = ModelSource.GITHUB,
+            downloadUrl = "https://github.com/Mozilla-Ocho/llamafile/releases/download/0.8.17/TinyLlama-1.1B-Chat-v1.0.Q5_K_M.llamafile",
+            description = "Low-memory assistant model for budget Android devices."
+        ),
+        OllamaModel(
+            name = "Llama-3.2-3B-Instruct (Q6_K)",
+            model = "llama-3.2-3b-instruct-q6_k",
+            size = 2_700_000_000L,
+            digest = "gh-llama-3.2-3b-q6",
+            source = ModelSource.GITHUB,
+            downloadUrl = "https://github.com/Mozilla-Ocho/llamafile/releases/download/0.8.17/Llama-3.2-3B-Instruct.Q6_K.llamafile",
+            description = "Higher quality assistant model for capable Android hardware."
+        )
+    )
+
+    val fdroid = listOf(
+        OllamaModel(
+            name = "TinyLlama-1.1B-Chat (Q4_K_M) — FOSS",
+            model = "tinyllama-1.1b-chat-q4_k_m-foss",
+            size = 668_000_000L,
+            digest = "fd-tinyllama-1.1b-q4",
+            source = ModelSource.FDROID,
+            downloadUrl = "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
+            description = "Permissively licensed (Apache 2.0) compact chat model. Compatible with F-Droid FOSS distribution."
+        ),
+        OllamaModel(
+            name = "Mistral-7B-Instruct-v0.1 (Q2_K) — FOSS",
+            model = "mistral-7b-instruct-v0.1-q2_k-foss",
+            size = 2_870_000_000L,
+            digest = "fd-mistral-7b-q2",
+            source = ModelSource.FDROID,
+            downloadUrl = "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q2_K.gguf",
+            description = "Apache 2.0 licensed instruction model. Suitable for devices with ≥4 GB RAM. F-Droid compatible."
+        ),
+        OllamaModel(
+            name = "OLMo-1B-Instruct (Q4_K_M) — FOSS",
+            model = "olmo-1b-instruct-q4_k_m-foss",
+            size = 630_000_000L,
+            digest = "fd-olmo-1b-q4",
+            source = ModelSource.FDROID,
+            downloadUrl = "https://huggingface.co/allenai/OLMo-1B-hf/resolve/main/model.safetensors",
+            description = "Fully open model (Apache 2.0) from Allen AI. Lightweight and FOSS-first. F-Droid compatible."
+        )
+    )
+}

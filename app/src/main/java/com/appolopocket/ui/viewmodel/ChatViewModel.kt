@@ -21,9 +21,7 @@ data class ChatUiState(
     val streamedContent: String = "",
     val connectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED,
     val currentMode: ChatMode = ChatMode.CHAT,
-    val error: String? = null,
-    val showAsciiAnimation: Boolean = false,
-    val asciiMessage: String = ""
+    val error: String? = null
 )
 
 enum class ChatMode {
@@ -31,8 +29,6 @@ enum class ChatMode {
 }
 
 sealed class ChatEvent {
-    data class ShowAscii(val message: String) : ChatEvent()
-    data class ModeChange(val mode: ChatMode) : ChatEvent()
     data class Error(val message: String) : ChatEvent()
     data object ScrollToBottom : ChatEvent()
 }
@@ -100,9 +96,6 @@ class ChatViewModel @Inject constructor(
 
     fun setMode(mode: ChatMode) {
         _uiState.update { it.copy(currentMode = mode) }
-        viewModelScope.launch {
-            _events.emit(ChatEvent.ModeChange(mode))
-        }
     }
 
     fun sendMessage() {
@@ -129,9 +122,6 @@ class ChatViewModel @Inject constructor(
                     error = null
                 )
             }
-
-            // Show typing animation
-            _events.emit(ChatEvent.ShowAscii("Thinking..."))
 
             sendMessageUseCase(
                 conversationId = convId,
@@ -189,9 +179,6 @@ class ChatViewModel @Inject constructor(
             currentConversationId = null
             _uiState.update { it.copy(messages = emptyList()) }
             preferencesRepository.setCurrentConversationId(null)
-            
-            // Show welcome animation
-            _events.emit(ChatEvent.ShowAscii("Starting new conversation..."))
         }
     }
 
@@ -206,6 +193,10 @@ class ChatViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.update { it.copy(error = null) }
+    }
+
+    fun showUnavailableFeature(featureName: String) {
+        _uiState.update { it.copy(error = "$featureName is not available yet.") }
     }
 
     override fun onCleared() {

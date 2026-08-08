@@ -57,11 +57,23 @@ data class ToolResult(
 data class LLMConfig(
     val modelName: String = "llama2",
     val baseUrl: String = "http://localhost:11434",
+    val modelSource: ModelSource = ModelSource.OLLAMA,
     val temperature: Float = 0.7f,
     val maxTokens: Int = 4096,
     val contextWindow: Int = 4096,
-    val stream: Boolean = true
+    val stream: Boolean = true,
+    val topP: Float = 0.9f,
+    val topK: Int = 40,
+    val repeatPenalty: Float = 1.1f
 )
+
+@Serializable
+enum class ModelSource {
+    OLLAMA,
+    HUGGING_FACE,
+    GITHUB,
+    FDROID
+}
 
 /**
  * Control prompts for AI behavior
@@ -186,6 +198,42 @@ data class ConversationMetadata(
 )
 
 /**
+ * Memory retention and storage settings
+ */
+@Serializable
+data class MemorySettings(
+    val maxEntries: Int = 500,
+    val retentionDays: Int = 30,
+    val clearOnExit: Boolean = false
+)
+
+/**
+ * Privacy and data collection settings
+ */
+@Serializable
+data class PrivacySettings(
+    val analyticsEnabled: Boolean = false,
+    val crashReportingEnabled: Boolean = false,
+    val clearHistoryOnExit: Boolean = false
+)
+
+/**
+ * Notification behavior settings
+ */
+@Serializable
+data class NotificationSettings(
+    val priority: NotificationPriority = NotificationPriority.DEFAULT,
+    val quietHoursEnabled: Boolean = false,
+    val quietHoursStart: Int = 22,
+    val quietHoursEnd: Int = 7
+)
+
+@Serializable
+enum class NotificationPriority {
+    LOW, DEFAULT, HIGH, MAX
+}
+
+/**
  * User preferences
  */
 @Serializable
@@ -193,10 +241,14 @@ data class UserPreferences(
     val approvalMode: ApprovalMode = ApprovalMode.SMART_AUTO,
     val theme: AppTheme = AppTheme.VAPORWAVE,
     val voiceEnabled: Boolean = false,
-        val notificationsEnabled: Boolean = true,
+    val notificationsEnabled: Boolean = true,
     val autoMemory: Boolean = true,
-    val asciiAnimations: Boolean = true,
-    val llmConfig: LLMConfig = LLMConfig()
+    val hapticFeedback: Boolean = true,
+    val keepScreenOn: Boolean = true,
+    val llmConfig: LLMConfig = LLMConfig(),
+    val memorySettings: MemorySettings = MemorySettings(),
+    val privacySettings: PrivacySettings = PrivacySettings(),
+    val notificationSettings: NotificationSettings = NotificationSettings()
 )
 
 @Serializable

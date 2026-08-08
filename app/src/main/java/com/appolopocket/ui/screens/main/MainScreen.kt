@@ -1,21 +1,20 @@
 package com.appolopocket.ui.screens.main
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.appolopocket.domain.model.Message
@@ -35,24 +34,19 @@ fun MainScreen(
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val artSeed = remember { System.currentTimeMillis() }
 
     // Handle events
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                is ChatEvent.ShowAscii -> {
-                    // Handle ASCII animation display
-                }
-                is ChatEvent.ModeChange -> {
-                    // Handle mode change animation
-                }
                 is ChatEvent.Error -> {
                     // Show error snackbar
                 }
                 ChatEvent.ScrollToBottom -> {
                     if (uiState.messages.isNotEmpty()) {
                         coroutineScope.launch {
-                            listState.animateScrollToItem(uiState.messages.size - 1)
+                            listState.scrollToItem(uiState.messages.size - 1)
                         }
                     }
                 }
@@ -63,7 +57,7 @@ fun MainScreen(
     // Auto-scroll when new messages arrive
     LaunchedEffect(uiState.messages.size) {
         if (uiState.messages.isNotEmpty()) {
-            listState.animateScrollToItem(uiState.messages.size - 1)
+            listState.scrollToItem(uiState.messages.size - 1)
         }
     }
 
@@ -90,6 +84,10 @@ fun MainScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            VaporwaveAccentBanner(randomSeed = artSeed)
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             // Mode tabs
             ModeTabs(
                 currentMode = uiState.currentMode,
@@ -106,7 +104,7 @@ fun MainScreen(
             ) {
                 if (uiState.messages.isEmpty() && !uiState.isLoading) {
                     // Empty state
-                    EmptyStateView()
+                    EmptyStateView(randomSeed = artSeed)
                 } else {
                     MessagesList(
                         messages = uiState.messages,
@@ -115,15 +113,6 @@ fun MainScreen(
                         streamedContent = uiState.streamedContent
                     )
                 }
-            }
-
-            // ASCII animation overlay
-            AnimatedVisibility(
-                visible = uiState.showAsciiAnimation,
-                enter = fadeIn() + slideInVertically(),
-                exit = fadeOut() + slideOutVertically()
-            ) {
-                AsciiAnimationOverlay(message = uiState.asciiMessage)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -139,9 +128,9 @@ fun MainScreen(
 
         // Quick tiles panel
         QuickTilePanel(
-            onVoiceClick = { /* TODO: Implement voice input */ },
-            onCameraClick = { /* TODO: Implement camera */ },
-            onFilesClick = { /* TODO: Implement file browser */ },
+            onVoiceClick = { viewModel.showUnavailableFeature("Voice input") },
+            onCameraClick = { viewModel.showUnavailableFeature("Camera tools") },
+            onFilesClick = { viewModel.showUnavailableFeature("File browser") },
             onSearchClick = { viewModel.setMode(ChatMode.SEARCH) },
             onSettingsClick = onNavigateToSettings,
             modifier = Modifier
@@ -329,17 +318,6 @@ private fun MessagesList(
 
 @Composable
 private fun StreamingMessage(content: String) {
-    val infiniteTransition = rememberInfiniteTransition(label = "cursor")
-    val cursorAlpha by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(500),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "cursorAlpha"
-    )
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -364,9 +342,9 @@ private fun StreamingMessage(content: String) {
             )
             Text(
                 text = "▌",
-                color = VaporwaveColors.NeonMagenta.copy(alpha = cursorAlpha),
+                color = VaporwaveColors.NeonMagenta,
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                    fontFamily = FontFamily.Monospace
                 )
             )
         }
@@ -374,21 +352,26 @@ private fun StreamingMessage(content: String) {
 }
 
 @Composable
-private fun EmptyStateView() {
+private fun EmptyStateView(randomSeed: Long) {
+    val startupArt = remember(randomSeed) { AsciiArt.generateVaporwaveStartupArt(randomSeed) }
+
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(vertical = 16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         AnimatedAsciiText(
-            text = AsciiArt.apolloBust,
+            text = startupArt,
             color = VaporwaveColors.NeonMagenta
         )
         
         Spacer(modifier = Modifier.height(24.dp))
         
         Text(
-            text = "Welcome to Appolo Pocket",
+            text = "WELCOME TO APOLLO POCKET",
             style = MaterialTheme.typography.headlineSmall,
             color = VaporwaveColors.TextPrimary
         )
@@ -396,7 +379,7 @@ private fun EmptyStateView() {
         Spacer(modifier = Modifier.height(8.dp))
         
         Text(
-            text = "Your AI Super Assistant",
+            text = "VAPORWAVE AI SUPER ASSISTANT",
             style = MaterialTheme.typography.bodyMedium,
             color = VaporwaveColors.TextSecondary
         )
@@ -411,6 +394,48 @@ private fun EmptyStateView() {
             text = "Type a message to begin...",
             style = MaterialTheme.typography.bodySmall,
             color = VaporwaveColors.TextTertiary
+        )
+    }
+}
+
+@Composable
+private fun VaporwaveAccentBanner(randomSeed: Long) {
+    val kanjiLine = remember(randomSeed) {
+        val random = kotlin.random.Random(randomSeed)
+        (1..6).joinToString("  ") {
+            listOf("愛", "夢", "神", "電", "夜", "空", "幻", "海").random(random)
+        }
+    }
+    val checker = "▓░".repeat(24)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = VaporwaveColors.GlassBackground,
+                shape = MaterialTheme.shapes.medium
+            )
+            .border(
+                width = 1.dp,
+                color = VaporwaveColors.ElectricCyan.copy(alpha = 0.4f),
+                shape = MaterialTheme.shapes.medium
+            )
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = checker,
+            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+            color = VaporwaveColors.NeonMagenta.copy(alpha = 0.7f)
+        )
+        Text(
+            text = kanjiLine,
+            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+            color = VaporwaveColors.ElectricCyan
+        )
+        Text(
+            text = checker.reversed(),
+            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+            color = VaporwaveColors.NeonMagenta.copy(alpha = 0.7f)
         )
     }
 }
@@ -479,32 +504,6 @@ private fun InputArea(
                     contentDescription = "Send"
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun AsciiAnimationOverlay(message: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = VaporwaveColors.GlassBackground,
-                shape = MaterialTheme.shapes.medium
-            )
-            .padding(16.dp)
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            LoadingIndicator()
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodySmall,
-                color = VaporwaveColors.TextSecondary
-            )
         }
     }
 }

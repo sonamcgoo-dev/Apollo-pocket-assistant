@@ -62,7 +62,12 @@ class SettingsViewModel @Inject constructor(
     fun checkConnection() {
         viewModelScope.launch {
             _uiState.update { it.copy(connectionStatus = ConnectionStatus.CONNECTING) }
-            val isConnected = llmRepository.checkConnection()
+            val source = _uiState.value.userPreferences.llmConfig.modelSource
+            val isConnected = if (source == ModelSource.OLLAMA) {
+                llmRepository.checkConnection()
+            } else {
+                true
+            }
             _uiState.update {
                 it.copy(
                     connectionStatus = if (isConnected) {
@@ -115,9 +120,14 @@ class SettingsViewModel @Inject constructor(
         updateLLMConfig(currentConfig.copy(modelName = modelName))
     }
 
-    fun updateOllamaUrl(url: String) {
+    fun updateBaseUrl(url: String) {
         val currentConfig = _uiState.value.userPreferences.llmConfig
         updateLLMConfig(currentConfig.copy(baseUrl = url))
+    }
+
+    fun updateModelSource(source: ModelSource) {
+        val currentConfig = _uiState.value.userPreferences.llmConfig
+        updateLLMConfig(currentConfig.copy(modelSource = source))
     }
 
     fun updateTemperature(temperature: Float) {
@@ -160,9 +170,58 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun updateAsciiAnimations(enabled: Boolean) {
+    fun updateHapticFeedback(enabled: Boolean) {
         viewModelScope.launch {
-            preferencesRepository.updateAsciiAnimations(enabled)
+            preferencesRepository.updateHapticFeedback(enabled)
+        }
+    }
+
+    fun updateKeepScreenOn(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updateKeepScreenOn(enabled)
+        }
+    }
+
+    fun updateTopP(topP: Float) {
+        val currentConfig = _uiState.value.userPreferences.llmConfig
+        updateLLMConfig(currentConfig.copy(topP = topP))
+    }
+
+    fun updateTopK(topK: Int) {
+        val currentConfig = _uiState.value.userPreferences.llmConfig
+        updateLLMConfig(currentConfig.copy(topK = topK))
+    }
+
+    fun updateRepeatPenalty(penalty: Float) {
+        val currentConfig = _uiState.value.userPreferences.llmConfig
+        updateLLMConfig(currentConfig.copy(repeatPenalty = penalty))
+    }
+
+    fun updateContextWindow(size: Int) {
+        val currentConfig = _uiState.value.userPreferences.llmConfig
+        updateLLMConfig(currentConfig.copy(contextWindow = size))
+    }
+
+    fun updateStreaming(enabled: Boolean) {
+        val currentConfig = _uiState.value.userPreferences.llmConfig
+        updateLLMConfig(currentConfig.copy(stream = enabled))
+    }
+
+    fun updateMemorySettings(settings: MemorySettings) {
+        viewModelScope.launch {
+            preferencesRepository.updateMemorySettings(settings)
+        }
+    }
+
+    fun updatePrivacySettings(settings: PrivacySettings) {
+        viewModelScope.launch {
+            preferencesRepository.updatePrivacySettings(settings)
+        }
+    }
+
+    fun updateNotificationSettings(settings: NotificationSettings) {
+        viewModelScope.launch {
+            preferencesRepository.updateNotificationSettings(settings)
         }
     }
 

@@ -1,6 +1,5 @@
 package com.appolopocket.ui.components
 
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -18,27 +17,51 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appolopocket.ui.theme.VaporwaveColors
-import kotlinx.coroutines.delay
 import kotlin.random.Random
 
 object AsciiArt {
-    
-    val apolloBust = """
-        |        _____
-        |       /     \
-        |      |  o o  |
-        |      |   >   |
-        |      |  ___  |
-        |       \_____/
-        |      /|     |\
-        |     / |     | \
-        |    /__|     |__\
-        |       |   |
-        |       |   |
-        |      /|   |\
-        |     / |   | \
-        |    /__|   |__\
-    """.trimMargin()
+    private val kanjiSet = listOf("愛", "夢", "月", "光", "波", "夜", "神", "空", "海", "星", "幻", "電", "風")
+    private val skylineSet = listOf("▁▂▃▄▅▆▇█", "█▇▆▅▄▃▂▁", "▂▄▆█▆▄▂", "▁▃▅▇█▇▅▃")
+    private val checkerSet = listOf("▓░", "░▓", "▞▚", "▚▞", "◢◤", "◥◣")
+
+    fun generateVaporwaveStartupArt(randomSeed: Long = System.currentTimeMillis()): String {
+        val random = Random(randomSeed)
+        val headerKanji = (1..8).joinToString(" ") { kanjiSet.random(random) }
+        val footerKanji = (1..8).joinToString(" ") { kanjiSet.random(random) }
+        val skyline = skylineSet.random(random)
+
+        val checkerRows = (0..5).joinToString("\n") { row ->
+            val pair = checkerSet[(row + random.nextInt(checkerSet.size)) % checkerSet.size]
+            buildString {
+                append(if (row % 2 == 0) "  " else "")
+                repeat(24) { append(pair[it % pair.length]) }
+            }
+        }
+
+        val statue = """
+            |            .-====-.
+            |          .'  _  _  '.
+            |         /   (o)(o)   \
+            |        |      /\      |
+            |        |   .-====-.   |
+            |         \  \______/  /
+            |       .-'.________.'-.
+            |      /  /|  APOLLO |\  \
+            |     /__/ |   BUST  | \__\
+        """.trimMargin()
+
+        return """
+            |┌──────────────────────────────────────────────┐
+            |│  $headerKanji  │
+            |├──────────────────────────────────────────────┤
+            |$checkerRows
+            |$statue
+            |      ${skyline.repeat(4).take(36)}
+            |├──────────────────────────────────────────────┤
+            |│  $footerKanji  │
+            |└──────────────────────────────────────────────┘
+        """.trimMargin()
+    }
 
     val loadingFrames = listOf(
         listOf("[■□□□□□□□□□]", "[■■□□□□□□□□]", "[■■■□□□□□□□]", "[■■■■□□□□□□]", 
@@ -159,24 +182,10 @@ object AsciiArt {
 fun AnimatedAsciiText(
     text: String,
     modifier: Modifier = Modifier,
-    color: Color = VaporwaveColors.NeonMagenta,
-    animate: Boolean = true
+    color: Color = VaporwaveColors.NeonMagenta
 ) {
-    var displayedText by remember { mutableStateOf("") }
-    var currentIndex by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(text) {
-        displayedText = ""
-        currentIndex = 0
-        while (currentIndex < text.length) {
-            displayedText = text.substring(0, currentIndex + 1)
-            currentIndex++
-            if (animate) delay(15)
-        }
-    }
-
     Text(
-        text = displayedText,
+        text = text,
         modifier = modifier,
         style = MaterialTheme.typography.bodySmall.copy(
             fontFamily = FontFamily.Monospace,
@@ -189,20 +198,10 @@ fun AnimatedAsciiText(
 
 @Composable
 fun LoadingIndicator(
-    modifier: Modifier = Modifier,
-    style: Int = 0
+    modifier: Modifier = Modifier
 ) {
-    var frame by remember { mutableIntStateOf(0) }
-    
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(100)
-            frame = (frame + 1) % AsciiArt.loadingFrames[style].size
-        }
-    }
-
     Text(
-        text = AsciiArt.loadingFrames[style][frame],
+        text = "[SYSTEM BUSY]",
         modifier = modifier,
         style = MaterialTheme.typography.bodyMedium.copy(
             fontFamily = FontFamily.Monospace
@@ -214,24 +213,10 @@ fun LoadingIndicator(
 @Composable
 fun TypewriterText(
     text: String,
-    modifier: Modifier = Modifier,
-    delayMs: Long = 30
+    modifier: Modifier = Modifier
 ) {
-    var displayedText by remember { mutableStateOf("") }
-    var currentIndex by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(text) {
-        displayedText = ""
-        currentIndex = 0
-        while (currentIndex < text.length) {
-            displayedText = text.substring(0, currentIndex + 1)
-            currentIndex++
-            delay(delayMs)
-        }
-    }
-
     Text(
-        text = displayedText,
+        text = text,
         modifier = modifier,
         style = MaterialTheme.typography.bodyMedium.copy(
             fontFamily = FontFamily.Monospace
@@ -244,21 +229,9 @@ fun TypewriterText(
 fun VaporwaveBackground(
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "background")
-    val animatedOffset by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1000f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(20000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "scroll"
-    )
-
     Canvas(
         modifier = modifier.fillMaxSize()
     ) {
-        // Base gradient background
         drawRect(
             brush = Brush.verticalGradient(
                 colors = listOf(
@@ -269,32 +242,29 @@ fun VaporwaveBackground(
             )
         )
 
-        // Grid lines
-        val gridSize = 50.dp.toPx()
-        val gridColor = VaporwaveColors.NeonMagenta.copy(alpha = 0.1f)
-
-        // Vertical lines
-        var x = (animatedOffset % gridSize)
-        while (x < size.width) {
-            drawLine(
-                color = gridColor,
-                start = Offset(x, 0f),
-                end = Offset(x, size.height),
-                strokeWidth = 1f
-            )
-            x += gridSize
-        }
-
-        // Horizontal lines
+        val tileSize = 28.dp.toPx()
+        var row = 0
         var y = 0f
-        while (y < size.height) {
-            drawLine(
-                color = gridColor,
-                start = Offset(0f, y),
-                end = Offset(size.width, y),
-                strokeWidth = 1f
-            )
-            y += gridSize
+        while (y < size.height + tileSize) {
+            val rowOffset = ((row % 4) - 2) * (tileSize / 3f)
+            var col = 0
+            var x = rowOffset
+            while (x < size.width + tileSize) {
+                val checkerColor = if ((row + col) % 2 == 0) {
+                    VaporwaveColors.NeonMagenta.copy(alpha = 0.07f)
+                } else {
+                    VaporwaveColors.ElectricCyan.copy(alpha = 0.05f)
+                }
+                drawRect(
+                    color = checkerColor,
+                    topLeft = Offset(x, y),
+                    size = androidx.compose.ui.geometry.Size(tileSize, tileSize)
+                )
+                x += tileSize
+                col++
+            }
+            y += tileSize
+            row++
         }
     }
 }
@@ -305,17 +275,6 @@ fun GlowingBorder(
     color: Color = VaporwaveColors.NeonMagenta,
     content: @Composable () -> Unit
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "glow")
-    val glowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 0.8f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "glowAlpha"
-    )
-
     Box(
         modifier = modifier
             .background(
@@ -325,7 +284,7 @@ fun GlowingBorder(
     ) {
         Canvas(modifier = Modifier.matchParentSize()) {
             drawRoundRect(
-                color = color.copy(alpha = glowAlpha),
+                color = color.copy(alpha = 0.55f),
                 style = Stroke(width = 2f),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(12.dp.toPx())
             )
@@ -340,22 +299,11 @@ fun NeonText(
     modifier: Modifier = Modifier,
     color: Color = VaporwaveColors.NeonMagenta
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "neon")
-    val glowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.5f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "neonGlow"
-    )
-
     Text(
         text = text,
         modifier = modifier,
         style = MaterialTheme.typography.headlineMedium,
-        color = color.copy(alpha = glowAlpha)
+        color = color.copy(alpha = 0.95f)
     )
 }
 
