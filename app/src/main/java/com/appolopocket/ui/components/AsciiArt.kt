@@ -182,8 +182,7 @@ object AsciiArt {
 fun AnimatedAsciiText(
     text: String,
     modifier: Modifier = Modifier,
-    color: Color = VaporwaveColors.NeonMagenta,
-    animate: Boolean = false
+    color: Color = VaporwaveColors.NeonMagenta
 ) {
     Text(
         text = text,
@@ -199,8 +198,7 @@ fun AnimatedAsciiText(
 
 @Composable
 fun LoadingIndicator(
-    modifier: Modifier = Modifier,
-    style: Int = 0
+    modifier: Modifier = Modifier
 ) {
     Text(
         text = "[SYSTEM BUSY]",
@@ -215,8 +213,7 @@ fun LoadingIndicator(
 @Composable
 fun TypewriterText(
     text: String,
-    modifier: Modifier = Modifier,
-    delayMs: Long = 30
+    modifier: Modifier = Modifier
 ) {
     Text(
         text = text,
